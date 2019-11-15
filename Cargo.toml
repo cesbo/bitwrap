@@ -1,0 +1,17 @@
+[package]
+name = "bitwrap"
+version = "0.0.1"
+authors = ["Cesbo Developers Team"]
+description = "Bit struct pack/unpack"
+documentation = "https://docs.rs/bitwrap"
+repository = "https://github.com/cesbo/bitwrap"
+edition = "2018"
+keywords = ["bit", "parser", "parsing"]
+license = "MIT"
+readme = "README.md"
+
+[workspace]
+members = [".", "bitwrap_derive"]
+
+[dependencies]
+bitwrap_derive = { path = "./bitwrap_derive" }
