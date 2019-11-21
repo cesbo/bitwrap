@@ -85,9 +85,6 @@ impl BitWrapMacro {
     }
 
     fn build_unpack(&mut self, field: &syn::Field) {
-        self.skip = 0;
-        self.remain = 8;
-
         for attr in field.attrs.iter().filter(|v| v.path.segments.len() == 1) {
             match attr.path.segments[0].ident.to_string().as_str() {
                 "bits" => {
@@ -103,6 +100,9 @@ impl BitWrapMacro {
     }
 
     fn build(&mut self, data: &syn::DataStruct) -> TokenStream {
+        self.skip = 0;
+        self.remain = 8;
+
         let fields = match &data.fields {
             syn::Fields::Named(v) => &v.named,
             syn::Fields::Unnamed(_v) => unimplemented!(),

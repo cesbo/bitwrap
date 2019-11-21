@@ -2,30 +2,43 @@ use bitwrap::*;
 
 #[test]
 fn test_unpack() {
-    const DATA: &[u8] = &[0x47, 0x05, 0x8d, 0x19];
+    const DATA: &[u8] = &[0xA5, 0x5B, 0x12, 0x34, 0xF5, 0x67, 0x89, 0xAF];
 
     #[derive(Default, Debug, BitWrap)]
     struct Packet {
-        #[bits(8)] sync_byte: u8,
-        #[bits(1)] transport_error_indicator: u8,
-        #[bits(1)] payload_unit_start_indicator: u8,
-        #[bits(1)] transport_priority: u8,
-        #[bits(13)] pid: u16,
-        #[bits(2)] transport_scrambling_control: u8,
-        #[bits(2)] adaptation_field_control: u8,
-        #[bits(4)] continuity_counter: u8,
+        #[bits(6)] rshift_test: u8,
+        #[bits(4)] lshift_rshift_test: u8,
+        #[bits(6)] skip_1: u8,
+        #[bits(16)] or_test: u16,
+        #[bits(4)] skip_2: u8,
+        #[bits(12)] or_mask_test: u16,
+        #[bits(13)] or_rshift_test: u16,
+        #[bits(3)] skip_3: u8,
     }
 
     let mut packet = Packet::default();
     packet.unpack(DATA);
-    dbg!(&packet);
 
-    // assert_eq!(packet.sync_byte, 0x47);
-    // assert_eq!(packet.transport_error_indicator, 0);
-    // assert_eq!(packet.payload_unit_start_indicator, 0);
-    // assert_eq!(packet.transport_priority, 0);
-    // assert_eq!(packet.pid, 1421);
-    // assert_eq!(packet.transport_scrambling_control, 0);
-    // assert_eq!(packet.adaptation_field_control, 1);
-    // assert_eq!(packet.continuity_counter, 9);
+    assert_eq!(packet.rshift_test, 0x29);
+    assert_eq!(packet.lshift_rshift_test, 0x05);
+    assert_eq!(packet.skip_1, 0x1B);
+    assert_eq!(packet.or_test, 0x1234);
+    assert_eq!(packet.skip_2, 0x0F);
+    assert_eq!(packet.or_mask_test, 0x0567);
+    assert_eq!(packet.or_rshift_test, 0x1135);
+}
+
+
+#[test]
+#[should_panic]
+fn test_overflow() {
+    const DATA: &[u8] = &[0xCE, 0x5B, 0x00];
+
+    #[derive(Default, Debug, BitWrap)]
+    struct Packet {
+        #[bits(32)] value: u32,
+    }
+
+    let mut packet = Packet::default();
+    packet.unpack(DATA);
 }
