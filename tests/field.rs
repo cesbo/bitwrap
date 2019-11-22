@@ -2,7 +2,7 @@ use bitwrap::*;
 
 
 #[test]
-fn test_nested() {
+fn test_bitfield() {
     const DATA: &[u8] = &[0xA5, 0x5B, 0xF5, 0x67, 0x89, 0xAF, 0xAA];
 
     #[derive(Default, Debug, BitWrap)]
