@@ -1,5 +1,6 @@
 use bitwrap::*;
 
+
 #[test]
 fn test_unpack() {
     const DATA: &[u8] = &[0xA5, 0x5B, 0x12, 0x34, 0xF5, 0x67, 0x89, 0xAF];
@@ -17,8 +18,9 @@ fn test_unpack() {
     }
 
     let mut packet = Packet::default();
-    packet.unpack(DATA);
+    let result = packet.unpack(DATA);
 
+    assert_eq!(result, DATA.len());
     assert_eq!(packet.rshift_test, 0x29);
     assert_eq!(packet.lshift_rshift_test, 0x05);
     assert_eq!(packet.skip_1, 0x1B);

@@ -16,9 +16,7 @@ use syn::{
 struct BitWrapMacro {
     struct_id: Ident,
     unpack_list: TokenStream,
-
-    skip: usize,
-    remain: usize,
+    bits: usize,
 }
 
 
@@ -27,9 +25,7 @@ impl BitWrapMacro {
         Self {
             struct_id: ident.clone(),
             unpack_list: TokenStream::default(),
-
-            skip: 0,
-            remain: 0,
+            bits: 0,
         }
     }
 
@@ -42,45 +38,43 @@ impl BitWrapMacro {
         let ty = &field.ty;
         let ident = &field.ident;
 
-        let bytes_check = (bits + 7) / 8 + self.skip;
-
         self.unpack_list.extend(quote! {
-            debug_assert!(src.len() >= #bytes_check, "array length is to short for BitWrap");
+            debug_assert!(src.len() >= ((#bits + 7) / 8 + offset),
+                "array length is to short for BitWrap");
             self.#ident =
         });
 
-        while bits > self.remain {
-            let skip = self.skip;
-            let shift = bits - self.remain; // value left shift
-            let mask = 0xFFu8 >> (8 - self.remain);
+        while bits > self.bits {
+            let shift = bits - self.bits; // value left shift
+            let mask = 0xFFu8 >> (8 - self.bits);
 
             self.unpack_list.extend(quote! {
-                (((src[#skip] & #mask) as #ty) << #shift) |
+                (((src[{ let x = offset; offset += 1; x }] & #mask) as #ty) << #shift) |
             });
 
-            bits -= self.remain;
-            self.remain = 8;
-            self.skip += 1;
+            bits -= self.bits;
+            self.bits = 8;
         }
 
-        let skip = self.skip;
-        let shift = self.remain - bits; // byte right shift
+        let shift = self.bits - bits; // byte right shift
         let mask = 0xFFu8 >> (8 - bits);
 
         if shift != 0 {
             self.unpack_list.extend(quote! {
-                (((src[#skip] >> #shift) & #mask) as #ty);
+                (((src[offset] >> #shift) & #mask) as #ty);
             });
         } else {
             self.unpack_list.extend(quote! {
-                ((src[#skip] & #mask) as #ty);
+                ((src[offset] & #mask) as #ty);
             });
         }
 
-        self.remain -= bits;
-        if self.remain == 0 {
-            self.remain = 8;
-            self.skip += 1;
+        self.bits -= bits;
+        if self.bits == 0 {
+            self.bits = 8;
+            self.unpack_list.extend(quote! {
+                offset += 1;
+            });
         }
     }
 
@@ -100,8 +94,7 @@ impl BitWrapMacro {
     }
 
     fn build(&mut self, data: &syn::DataStruct) -> TokenStream {
-        self.skip = 0;
-        self.remain = 8;
+        self.bits = 8;
 
         let fields = match &data.fields {
             syn::Fields::Named(v) => &v.named,
@@ -118,8 +111,10 @@ impl BitWrapMacro {
 
         quote! {
             impl BitWrap for #struct_id {
-                fn unpack(&mut self, src: &[u8]) {
+                fn unpack(&mut self, src: &[u8]) -> usize {
+                    let mut offset: usize = 0;
                     #unpack_list
+                    offset
                 }
             }
         }
