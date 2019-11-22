@@ -28,6 +28,7 @@ fn test_unpack() {
     assert_eq!(packet.skip_2, 0x0F);
     assert_eq!(packet.or_mask_test, 0x0567);
     assert_eq!(packet.or_rshift_test, 0x1135);
+    assert_eq!(packet.skip_3, 0x07);
 }
 
 

@@ -78,6 +78,16 @@ impl BitWrapMacro {
         }
     }
 
+    fn build_unpack_bitfield(&mut self, field: &syn::Field) {
+        assert_eq!(self.bits, 8, "bitwrap not aligned");
+
+        let ident = &field.ident;
+
+        self.unpack_list.extend(quote! {
+            offset += self.#ident.unpack(&src[offset ..]);
+        });
+    }
+
     fn build_unpack(&mut self, field: &syn::Field) {
         for attr in field.attrs.iter().filter(|v| v.path.segments.len() == 1) {
             match attr.path.segments[0].ident.to_string().as_str() {
@@ -87,6 +97,9 @@ impl BitWrapMacro {
                         syn::Meta::List(v) => self.build_unpack_bits(field, v),
                         _ => panic!("bits meta format mismatch"),
                     }
+                }
+                "bitfield" => {
+                    self.build_unpack_bitfield(field)
                 }
                 _ => {}
             };
@@ -106,6 +119,8 @@ impl BitWrapMacro {
             self.build_unpack(field);
         }
 
+        assert_eq!(self.bits, 8, "bitwrap not aligned");
+
         let struct_id = &self.struct_id;
         let unpack_list = &self.unpack_list;
 
@@ -122,7 +137,7 @@ impl BitWrapMacro {
 }
 
 
-#[proc_macro_derive(BitWrap, attributes(bits))]
+#[proc_macro_derive(BitWrap, attributes(bits, bitfield))]
 pub fn bitwrap_derive(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     let input = parse_macro_input!(input as syn::DeriveInput);
 
