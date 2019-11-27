@@ -169,7 +169,8 @@ impl BitWrapMacro {
                     dst.len() - len
                 }
 
-                fn unpack(&mut self, src: &[u8]) -> usize {
+                fn unpack<R: AsRef<[u8]>>(&mut self, src: R) -> usize {
+                    let src = src.as_ref();
                     let mut offset: usize = 0;
                     #unpack_list
                     offset

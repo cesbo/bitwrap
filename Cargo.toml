@@ -1,8 +1,8 @@
 [package]
 name = "bitwrap"
-version = "0.0.1"
+version = "0.1.0"
 authors = ["Cesbo Developers Team"]
-description = "Bit struct pack/unpack"
+description = "struct data member with explicit size, in bits"
 documentation = "https://docs.rs/bitwrap"
 repository = "https://github.com/cesbo/bitwrap"
 edition = "2018"
