@@ -2,7 +2,7 @@ use bitwrap::*;
 
 
 #[test]
-fn test_unpack() {
+fn test_unpack_pack() {
     const DATA: &[u8] = &[0xA5, 0x5B, 0x12, 0x34, 0xF5, 0x67, 0x89, 0xAF];
 
     #[derive(Default, Debug, BitWrap)]
@@ -29,6 +29,12 @@ fn test_unpack() {
     assert_eq!(packet.or_mask_test, 0x0567);
     assert_eq!(packet.or_rshift_test, 0x1135);
     assert_eq!(packet.skip_3, 0x07);
+
+    let mut buffer: Vec<u8> = Vec::with_capacity(256);
+    let result = packet.pack(&mut buffer);
+
+    assert_eq!(result, DATA.len());
+    assert_eq!(buffer.as_slice(), DATA);
 }
 
 
