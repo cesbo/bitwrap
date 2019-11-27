@@ -14,4 +14,4 @@ readme = "README.md"
 members = [".", "bitwrap_derive"]
 
 [dependencies]
-bitwrap_derive = { path = "./bitwrap_derive" }
+bitwrap_derive = { path = "./bitwrap_derive", version = "0.1.0" }
