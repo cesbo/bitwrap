@@ -39,4 +39,10 @@ fn test_bitfield() {
     assert_eq!(packet.f2.or_rshift_test, 0x1135);
     assert_eq!(packet.f2.skip_3, 0x07);
     assert_eq!(packet.tail, 0xAA);
+
+    let mut buffer: Vec<u8> = Vec::with_capacity(256);
+    let result = packet.pack(&mut buffer);
+
+    assert_eq!(result, DATA.len());
+    assert_eq!(buffer.as_slice(), DATA);
 }

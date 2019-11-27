@@ -110,10 +110,14 @@ impl BitWrapMacro {
         }
     }
 
-    fn build_unpack_bitfield(&mut self, field: &syn::Field) {
+    fn build_field_bitfield(&mut self, field: &syn::Field) {
         assert_eq!(self.bits, 8, "bitwrap not aligned");
 
         let ident = &field.ident;
+
+        self.pack_list.extend(quote! {
+            self.#ident.pack(dst);
+        });
 
         self.unpack_list.extend(quote! {
             offset += self.#ident.unpack(&src[offset ..]);
@@ -131,7 +135,7 @@ impl BitWrapMacro {
                     }
                 }
                 "bitfield" => {
-                    self.build_unpack_bitfield(field)
+                    self.build_field_bitfield(field)
                 }
                 _ => {}
             };

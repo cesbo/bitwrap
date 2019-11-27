@@ -2,7 +2,7 @@ use bitwrap::*;
 
 
 #[test]
-fn test_unpack_pack() {
+fn test_bits() {
     const DATA: &[u8] = &[0xA5, 0x5B, 0x12, 0x34, 0xF5, 0x67, 0x89, 0xAF];
 
     #[derive(Default, Debug, BitWrap)]
