@@ -110,7 +110,7 @@ impl BitWrapMacro {
         }
     }
 
-    fn build_field_bitfield(&mut self, field: &syn::Field) {
+    fn build_field_bitwrap(&mut self, field: &syn::Field) {
         assert_eq!(self.bits, 8, "bitwrap not aligned");
 
         let ident = &field.ident;
@@ -134,8 +134,8 @@ impl BitWrapMacro {
                         _ => panic!("bits meta format mismatch"),
                     }
                 }
-                "bitfield" => {
-                    self.build_field_bitfield(field)
+                "bitwrap" => {
+                    self.build_field_bitwrap(field)
                 }
                 _ => {}
             };
@@ -181,7 +181,7 @@ impl BitWrapMacro {
 }
 
 
-#[proc_macro_derive(BitWrap, attributes(bits, bitfield))]
+#[proc_macro_derive(BitWrap, attributes(bits, bitwrap))]
 pub fn bitwrap_derive(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     let input = parse_macro_input!(input as syn::DeriveInput);
 

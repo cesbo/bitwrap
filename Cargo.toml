@@ -1,6 +1,6 @@
 [package]
 name = "bitwrap"
-version = "0.1.0"
+version = "0.1.1"
 authors = ["Cesbo Developers Team"]
 description = "struct data member with explicit size, in bits"
 documentation = "https://docs.rs/bitwrap"
@@ -14,4 +14,4 @@ readme = "README.md"
 members = [".", "bitwrap_derive"]
 
 [dependencies]
-bitwrap_derive = { path = "./bitwrap_derive", version = "0.1.0" }
+bitwrap_derive = { path = "./bitwrap_derive", version = "0.1.1" }

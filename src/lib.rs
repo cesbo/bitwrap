@@ -53,7 +53,7 @@
 //!
 //! #[derive(Default, BitWrap)]
 //! struct Packet {
-//!     #[bitfield] nested: Field,
+//!     #[bitwrap] nested: Field,
 //!     #[bits(16)] f1: u16,
 //! }
 //!
