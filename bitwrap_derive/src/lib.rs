@@ -80,17 +80,15 @@ impl BitWrapMacro {
             self.pack_list.extend(quote! {
                 let b = b | (((self.#ident as u8) & #mask) << #shift);
             });
-        } else {
-            self.pack_list.extend(quote! {
-                let b = b | ((self.#ident as u8) & #mask);
-            });
-        }
 
-        if shift != 0 {
             self.unpack_list.extend(quote! {
                 (((src[offset] >> #shift) & #mask) as #ty);
             });
         } else {
+            self.pack_list.extend(quote! {
+                let b = b | ((self.#ident as u8) & #mask);
+            });
+
             self.unpack_list.extend(quote! {
                 ((src[offset] & #mask) as #ty);
             });
