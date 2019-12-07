@@ -74,7 +74,44 @@ packet.pack(&mut buffer);
 assert_eq!(buffer.as_slice(), DATA);
 ```
 
+## Skip bits
+
+Some packets contains reserved or fixed bits.
+This bits could be skiped with `bits_skip` attribute.
+For example packet has next format:
+
+| Field | Bits |
+|---|---|
+| Data | 6 |
+| 0b00 | 2 |
+| 0b1111 | 4 |
+| Data | 4 |
+
+```rust
+use bitwrap::*;
+
+#[derive(Default, BitWrap)]
+struct Packet {
+    #[bits(6)] f1: u8,
+    #[bits_skip(2)]
+    #[bits_skip(4, 0b1111)]
+    #[bits(4)] f2: u8,
+}
+
+const DATA: &[u8] = &[0xAC, 0xF5];
+
+let mut packet = Packet::default();
+packet.unpack(DATA);
+
+assert_eq!(packet.f1, 0x2B);
+assert_eq!(packet.f2, 0x05);
+
+let mut buffer: Vec<u8> = Vec::new();
+packet.pack(&mut buffer);
+
+assert_eq!(buffer.as_slice(), DATA);
+```
+
 ## TODO
 
-- little-endian
 - list of nested fields

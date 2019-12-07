@@ -108,6 +108,71 @@ impl BitWrapMacro {
         }
     }
 
+    fn build_field_bits_skip(&mut self, meta_list: &syn::MetaList) {
+        let mut nested = meta_list.nested.iter();
+
+        let mut bits = match nested.next() {
+            Some(syn::NestedMeta::Lit(syn::Lit::Int(v))) => v.base10_parse::<usize>().unwrap(),
+            _ => panic!("bits value should be a number"),
+        };
+
+        let value = match nested.next() {
+            Some(syn::NestedMeta::Lit(syn::Lit::Int(v))) => v.base10_parse::<usize>().unwrap(),
+            _ => 0usize,
+        };
+
+        if self.bits == 8 {
+            self.pack_list.extend(quote! {
+                let b = 0;
+            });
+
+            self.unpack_list.extend(quote! {
+                debug_assert!(src.len() >= ((#bits + 7) / 8 + offset),
+                    "array length is to short for BitWrap");
+            });
+        }
+
+        while bits > self.bits {
+            let shift = bits - self.bits; // value left shift
+            let mask = 0xFFu8 >> (8 - self.bits);
+            let v = ((value >> shift) as u8) & mask;
+
+            self.pack_list.extend(quote! {
+                let b = b | #v;
+                dst.push(b);
+                let b = 0;
+            });
+
+            self.unpack_list.extend(quote! {
+                offset += 1;
+            });
+
+            bits -= self.bits;
+            self.bits = 8;
+        }
+
+        let shift = self.bits - bits; // byte right shift
+        let mask = 0xFFu8 >> (8 - bits);
+        let v = ((value as u8) & mask) << shift;
+
+        self.pack_list.extend(quote! {
+            let b = b | #v;
+        });
+
+        self.bits -= bits;
+        if self.bits == 0 {
+            self.bits = 8;
+
+            self.pack_list.extend(quote! {
+                dst.push(b);
+            });
+
+            self.unpack_list.extend(quote! {
+                offset += 1;
+            });
+        }
+    }
+
     fn build_field_bitwrap(&mut self, field: &syn::Field) {
         assert_eq!(self.bits, 8, "bitwrap not aligned");
 
@@ -129,7 +194,14 @@ impl BitWrapMacro {
                     let meta = attr.parse_meta().unwrap();
                     match &meta {
                         syn::Meta::List(v) => self.build_field_bits(field, v),
-                        _ => panic!("bits meta format mismatch"),
+                        _ => panic!("bits format mismatch"),
+                    }
+                }
+                "bits_skip" => {
+                    let meta = attr.parse_meta().unwrap();
+                    match &meta {
+                        syn::Meta::List(v) => self.build_field_bits_skip(v),
+                        _ => panic!("bits_skip format mismatch"),
                     }
                 }
                 "bitwrap" => {
@@ -179,7 +251,7 @@ impl BitWrapMacro {
 }
 
 
-#[proc_macro_derive(BitWrap, attributes(bits, bitwrap))]
+#[proc_macro_derive(BitWrap, attributes(bits, bits_skip, bitwrap))]
 pub fn bitwrap_derive(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     let input = parse_macro_input!(input as syn::DeriveInput);
 
