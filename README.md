@@ -7,7 +7,18 @@
 bitwrap is a derive macro and interface to declare a struct data member
 with explicit size, in bits.
 
-## Example
+## Bits
+
+`bits` attribute accept only one argument - field size in bits.
+For example packet has next format:
+
+| Field | Bits |
+|---|---|
+| f1 | 1 |
+| f2 | 1 |
+| f3 | 2 |
+| f4 | 4 |
+| f5 | 16 |
 
 ```rust
 use bitwrap::*;
@@ -86,6 +97,11 @@ For example packet has next format:
 | 0b00 | 2 |
 | 0b1111 | 4 |
 | Data | 4 |
+
+bits_skip attribute accept next arguments:
+
+- size in bits
+- value. optional argument. by the default: 0
 
 ```rust
 use bitwrap::*;
