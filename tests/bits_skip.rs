@@ -11,7 +11,7 @@ fn test_bits_skip() {
         #[bits_skip(2)]
         #[bits(8)] v2: u8,
         #[bits_skip(4, 0b1111)]
-        #[bits(4)] v3: u8
+        #[bits(4)] v3: u8,
     }
 
     let mut packet = Packet::default();

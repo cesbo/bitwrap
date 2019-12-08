@@ -113,7 +113,7 @@ impl BitWrapMacro {
 
         let mut bits = match nested.next() {
             Some(syn::NestedMeta::Lit(syn::Lit::Int(v))) => v.base10_parse::<usize>().unwrap(),
-            _ => panic!("bits value should be a number"),
+            _ => panic!("bits_skip value should be a number"),
         };
 
         let value = match nested.next() {

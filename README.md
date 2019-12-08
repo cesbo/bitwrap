@@ -52,32 +52,44 @@ assert_eq!(buffer.as_slice(), DATA);
 ## Nested Fields
 
 ```rust
+use std::net::Ipv4Addr;
 use bitwrap::*;
 
-#[derive(Default, BitWrap)]
-struct Field {
-    #[bits(1)] f1: u8,
-    #[bits(1)] f2: u8,
-    #[bits(2)] f3: u8,
-    #[bits(4)] f4: u8,
+#[derive(BitWrap)]
+struct IpAddr {
+    #[bitwrap] inner: Ipv4Addr,
+}
+
+impl Default for IpAddr {
+    fn default() -> Self {
+        IpAddr {
+            inner: Ipv4Addr::new(0, 0, 0, 0),
+        }
+    }
 }
 
 #[derive(Default, BitWrap)]
-struct Packet {
-    #[bitwrap] nested: Field,
-    #[bits(16)] f1: u16,
+struct IP4 {
+    #[bits(8)] ttl: u8,
+    #[bits(8)] protocol: u8,
+    #[bits(16)] checksum: u16,
+    #[bitwrap] src: IpAddr,
+    #[bitwrap] dst: IpAddr,
 }
 
-const DATA: &[u8] = &[0xAA, 0x12, 0x34];
+const DATA: &[u8] = &[
+    0x40, 0x88, 0x37, 0x5D, 0x8B, 0x85, 0xCC, 0xB0,
+    0x8B, 0x85, 0xCC, 0xB7,
+];
 
-let mut packet = Packet::default();
+let mut packet = IP4::default();
 packet.unpack(DATA);
 
-assert_eq!(packet.nested.f1, 1);
-assert_eq!(packet.nested.f2, 0);
-assert_eq!(packet.nested.f3, 2);
-assert_eq!(packet.nested.f4, 0x0A);
-assert_eq!(packet.f1, 0x1234);
+assert_eq!(packet.ttl, 64);
+assert_eq!(packet.protocol, 136);
+assert_eq!(packet.checksum, 0x375D);
+assert_eq!(packet.src.inner, Ipv4Addr::new(139, 133, 204, 176));
+assert_eq!(packet.dst.inner, Ipv4Addr::new(139, 133, 204, 183));
 
 let mut buffer: Vec<u8> = Vec::new();
 packet.pack(&mut buffer);
