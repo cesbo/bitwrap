@@ -7,7 +7,7 @@
 bitwrap is a derive macro and interface to declare a struct data member
 with explicit size, in bits.
 
-## Bits
+## Example
 
 `bits` attribute accept only one argument - field size in bits.
 For example packet has next format:
