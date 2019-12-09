@@ -49,47 +49,53 @@ packet.pack(&mut buffer);
 assert_eq!(buffer.as_slice(), DATA);
 ```
 
-## Nested Fields
+## Nested objects
+
+Nested field is an object with BitWrap interface.
+
+For example part of IPv4 packet:
+
+| Field | Bits |
+|---|---|
+| ttl | 8 |
+| protocol | 8 |
+| checksum | 16 |
+| src | 32 |
+| dst | 32 |
 
 ```rust
 use std::net::Ipv4Addr;
 use bitwrap::*;
 
 #[derive(BitWrap)]
-struct IpAddr {
-    #[bitwrap] inner: Ipv4Addr,
-}
-
-impl Default for IpAddr {
-    fn default() -> Self {
-        IpAddr {
-            inner: Ipv4Addr::new(0, 0, 0, 0),
-        }
-    }
-}
-
-#[derive(Default, BitWrap)]
 struct IP4 {
     #[bits(8)] ttl: u8,
     #[bits(8)] protocol: u8,
     #[bits(16)] checksum: u16,
-    #[bitwrap] src: IpAddr,
-    #[bitwrap] dst: IpAddr,
+    #[bitwrap] src: Ipv4Addr,
+    #[bitwrap] dst: Ipv4Addr,
 }
 
 const DATA: &[u8] = &[
-    0x40, 0x88, 0x37, 0x5D, 0x8B, 0x85, 0xCC, 0xB0,
-    0x8B, 0x85, 0xCC, 0xB7,
+    0x40, 0x88, 0x37, 0x5D, 0xC0, 0xA8, 0xC8, 0xB0,
+    0xC0, 0xA8, 0xC8, 0xB7,
 ];
 
-let mut packet = IP4::default();
+let mut packet = IP4 {
+    ttl: 0,
+    protocol: 0,
+    checksum: 0,
+    src: Ipv4Addr::new(0, 0, 0, 0),
+    dst: Ipv4Addr::new(0, 0, 0, 0),
+};
+
 packet.unpack(DATA);
 
 assert_eq!(packet.ttl, 64);
 assert_eq!(packet.protocol, 136);
 assert_eq!(packet.checksum, 0x375D);
-assert_eq!(packet.src.inner, Ipv4Addr::new(139, 133, 204, 176));
-assert_eq!(packet.dst.inner, Ipv4Addr::new(139, 133, 204, 183));
+assert_eq!(packet.src, Ipv4Addr::new(192, 168, 200, 176));
+assert_eq!(packet.dst, Ipv4Addr::new(192, 168, 200, 183));
 
 let mut buffer: Vec<u8> = Vec::new();
 packet.pack(&mut buffer);

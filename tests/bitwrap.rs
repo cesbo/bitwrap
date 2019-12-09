@@ -10,8 +10,8 @@ fn test_bitwrap() {
         0x00, 0x04, 0x76, 0xDD, 0xBB, 0x3A, 0x00, 0x04,
         0x75, 0xC7, 0x87, 0x49, 0x08, 0x00, 0x45, 0x00,
         0x00, 0x28, 0x52, 0x7E, 0x40, 0x00, 0x40, 0x88,
-        0x37, 0x5D, 0x8B, 0x85, 0xCC, 0xB0, 0x8B, 0x85,
-        0xCC, 0xB7,
+        0x37, 0x5D, 0xC0, 0xA8, 0xC8, 0xB0, 0xC0, 0xA8,
+        0xC8, 0xB7,
     ];
 
     // Hardware address
@@ -100,8 +100,8 @@ fn test_bitwrap() {
     assert_eq!(packet.ipv4.ttl, 64);
     assert_eq!(packet.ipv4.protocol, 136);
     assert_eq!(packet.ipv4.checksum, 0x375D);
-    assert_eq!(packet.ipv4.src.inner, Ipv4Addr::new(139, 133, 204, 176));
-    assert_eq!(packet.ipv4.dst.inner, Ipv4Addr::new(139, 133, 204, 183));
+    assert_eq!(packet.ipv4.src.inner, Ipv4Addr::new(192, 168, 200, 176));
+    assert_eq!(packet.ipv4.dst.inner, Ipv4Addr::new(192, 168, 200, 183));
 
     let mut buffer: Vec<u8> = Vec::with_capacity(256);
     let result = packet.pack(&mut buffer);
