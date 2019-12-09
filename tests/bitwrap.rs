@@ -43,9 +43,9 @@ fn test_bitwrap() {
     }
 
     // IPv4 Address
-    #[derive(Debug)]
+    #[derive(Debug, BitWrap)]
     struct IpAddr {
-        inner: Ipv4Addr,
+        #[bitwrap] inner: Ipv4Addr,
     }
 
     impl Default for IpAddr {
@@ -53,20 +53,6 @@ fn test_bitwrap() {
             IpAddr {
                 inner: Ipv4Addr::new(0, 0, 0, 0),
             }
-        }
-    }
-
-    impl BitWrap for IpAddr {
-        fn pack(&self, dst: &mut [u8]) -> usize {
-            assert!(dst.len() >= 4);
-            (&mut dst[.. 4]).clone_from_slice(&self.inner.octets());
-            4
-        }
-
-        fn unpack(&mut self, src: &[u8]) -> usize {
-            assert!(src.len() >= 4);
-            self.inner = Ipv4Addr::from(unsafe { *(src.as_ptr() as *const [u8; 4]) });
-            4
         }
     }
 

@@ -20,6 +20,12 @@ keywords = [
 license = "MIT"
 readme = "README.md"
 
+[features]
+std = []
+default = [
+    "std",
+]
+
 [workspace]
 members = [".", "bitwrap_derive"]
 

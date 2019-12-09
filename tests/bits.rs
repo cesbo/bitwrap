@@ -30,7 +30,8 @@ fn test_bits() {
     assert_eq!(packet.or_rshift_test, 0x1135);
     assert_eq!(packet.skip_3, 0x07);
 
-    let mut buffer: [u8; 8] = [0; 8];
+    let mut buffer: Vec<u8> = Vec::new();
+    buffer.resize(64, 0);
     let result = packet.pack(&mut buffer);
 
     assert_eq!(result, DATA.len());
