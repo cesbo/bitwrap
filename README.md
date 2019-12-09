@@ -148,7 +148,3 @@ let result = packet.pack(&mut buffer);
 
 assert_eq!(&buffer[.. result], DATA);
 ```
-
-## TODO
-
-- list of nested fields
