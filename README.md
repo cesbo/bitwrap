@@ -44,9 +44,10 @@ assert_eq!(packet.f4, 0x0A);
 assert_eq!(packet.f5, 0x1234);
 
 let mut buffer: Vec<u8> = Vec::new();
-packet.pack(&mut buffer);
+buffer.resize(3, 0);
+let result = packet.pack(&mut buffer);
 
-assert_eq!(buffer.as_slice(), DATA);
+assert_eq!(&buffer[.. result], DATA);
 ```
 
 ## Nested objects
@@ -98,9 +99,10 @@ assert_eq!(packet.src, Ipv4Addr::new(192, 168, 200, 176));
 assert_eq!(packet.dst, Ipv4Addr::new(192, 168, 200, 183));
 
 let mut buffer: Vec<u8> = Vec::new();
-packet.pack(&mut buffer);
+buffer.resize(32, 0);
+let result = packet.pack(&mut buffer);
 
-assert_eq!(buffer.as_slice(), DATA);
+assert_eq!(&buffer[.. result], DATA);
 ```
 
 ## Skip bits
@@ -141,9 +143,10 @@ assert_eq!(packet.f1, 0x2B);
 assert_eq!(packet.f2, 0x05);
 
 let mut buffer: Vec<u8> = Vec::new();
-packet.pack(&mut buffer);
+buffer.resize(2, 0);
+let result = packet.pack(&mut buffer);
 
-assert_eq!(buffer.as_slice(), DATA);
+assert_eq!(&buffer[.. result], DATA);
 ```
 
 ## TODO
