@@ -30,16 +30,15 @@ fn test_bits() {
     assert_eq!(packet.or_rshift_test, 0x1135);
     assert_eq!(packet.skip_3, 0x07);
 
-    let mut buffer: Vec<u8> = Vec::with_capacity(256);
+    let mut buffer: [u8; 8] = [0; 8];
     let result = packet.pack(&mut buffer);
 
     assert_eq!(result, DATA.len());
-    assert_eq!(buffer.as_slice(), DATA);
+    assert_eq!(&buffer[.. result], DATA);
 }
 
 
 #[test]
-#[should_panic]
 fn test_overflow() {
     const DATA: &[u8] = &[0xCE, 0x5B, 0x00];
 
@@ -49,5 +48,6 @@ fn test_overflow() {
     }
 
     let mut packet = Packet::default();
-    packet.unpack(DATA);
+    let result = packet.unpack(DATA);
+    assert_eq!(result, 4);
 }

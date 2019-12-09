@@ -22,9 +22,9 @@ fn test_bits_skip() {
     assert_eq!(packet.v2, 0x55);
     assert_eq!(packet.v3, 0x05);
 
-    let mut buffer: Vec<u8> = Vec::with_capacity(256);
+    let mut buffer: [u8; 3] = [0; 3];
     let result = packet.pack(&mut buffer);
 
     assert_eq!(result, DATA.len());
-    assert_eq!(buffer.as_slice(), DATA);
+    assert_eq!(&buffer[.. result], DATA);
 }

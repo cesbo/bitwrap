@@ -21,15 +21,17 @@ fn test_bitwrap() {
     }
 
     impl BitWrap for HW {
-        fn pack(&self, dst: &mut Vec<u8>) -> usize {
-            dst.extend_from_slice(&self.inner);
+        fn pack<R: AsMut<[u8]>>(&self, dst: &mut R) -> usize {
+            let dst = dst.as_mut();
+            assert!(dst.len() >= 6);
+            (&mut dst[.. 6]).clone_from_slice(&self.inner);
             6
         }
 
         fn unpack<R: AsRef<[u8]>>(&mut self, src: R) -> usize {
             let src = src.as_ref();
             assert!(src.len() >= 6);
-            self.inner.clone_from_slice(&src[0 .. 6]);
+            self.inner.clone_from_slice(&src[.. 6]);
             6
         }
     }
@@ -43,9 +45,9 @@ fn test_bitwrap() {
     }
 
     // IPv4 Address
-    #[derive(Debug, BitWrap)]
+    #[derive(Debug)]
     struct IpAddr {
-        #[bitwrap] inner: Ipv4Addr,
+        inner: Ipv4Addr,
     }
 
     impl Default for IpAddr {
@@ -53,6 +55,22 @@ fn test_bitwrap() {
             IpAddr {
                 inner: Ipv4Addr::new(0, 0, 0, 0),
             }
+        }
+    }
+
+    impl BitWrap for IpAddr {
+        fn pack<R: AsMut<[u8]>>(&self, dst: &mut R) -> usize {
+            let dst = dst.as_mut();
+            assert!(dst.len() >= 4);
+            (&mut dst[.. 4]).clone_from_slice(&self.inner.octets());
+            4
+        }
+
+        fn unpack<R: AsRef<[u8]>>(&mut self, src: R) -> usize {
+            let src = src.as_ref();
+            assert!(src.len() >= 4);
+            self.inner = Ipv4Addr::from(unsafe { *(src.as_ptr() as *const [u8; 4]) });
+            4
         }
     }
 
@@ -103,9 +121,10 @@ fn test_bitwrap() {
     assert_eq!(packet.ipv4.src.inner, Ipv4Addr::new(192, 168, 200, 176));
     assert_eq!(packet.ipv4.dst.inner, Ipv4Addr::new(192, 168, 200, 183));
 
-    let mut buffer: Vec<u8> = Vec::with_capacity(256);
+    let mut buffer: Vec<u8> = Vec::new();
+    buffer.resize(64, 0);
     let result = packet.pack(&mut buffer);
 
     assert_eq!(result, DATA.len());
-    assert_eq!(buffer.as_slice(), DATA);
+    assert_eq!(&buffer[.. result], DATA);
 }

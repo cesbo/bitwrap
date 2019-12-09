@@ -1,12 +1,22 @@
 [package]
 name = "bitwrap"
-version = "0.1.2"
+version = "0.2.0"
 authors = ["Cesbo Developers Team"]
-description = "struct data member with explicit size, in bits"
+categories = [
+    "data-structures",
+    "embedded",
+    "no-std",
+]
+description = "pack/unpack data into byte array"
 documentation = "https://docs.rs/bitwrap"
 repository = "https://github.com/cesbo/bitwrap"
 edition = "2018"
-keywords = ["bit", "parser", "parsing"]
+keywords = [
+    "bit",
+    "bitfield",
+    "parser",
+    "parsing",
+]
 license = "MIT"
 readme = "README.md"
 
@@ -14,4 +24,4 @@ readme = "README.md"
 members = [".", "bitwrap_derive"]
 
 [dependencies]
-bitwrap_derive = { path = "./bitwrap_derive", version = "0.1.2" }
+bitwrap_derive = { path = "./bitwrap_derive", version = "0.2.0" }

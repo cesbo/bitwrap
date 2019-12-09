@@ -41,13 +41,20 @@ impl BitWrapMacro {
         let ident = &field.ident;
 
         if self.bits == 8 {
+            let bytes = (bits + 7) / 8;
+
             self.pack_list.extend(quote! {
+                if #bytes + offset > dst.len() {
+                    return #bytes + offset;
+                }
+
                 let b = 0;
             });
 
             self.unpack_list.extend(quote! {
-                debug_assert!(src.len() >= ((#bits + 7) / 8 + offset),
-                    "array length is to short for BitWrap");
+                if #bytes + offset > src.len() {
+                    return #bytes + offset;
+                }
             });
         }
 
@@ -60,8 +67,8 @@ impl BitWrapMacro {
             let mask = 0xFFu8 >> (8 - self.bits);
 
             self.pack_list.extend(quote! {
-                let b = b | (((self.#ident >> #shift) as u8) & #mask);
-                dst.push(b);
+                dst[offset] = b | (((self.#ident >> #shift) as u8) & #mask);
+                offset += 1;
                 let b = 0;
             });
 
@@ -99,7 +106,8 @@ impl BitWrapMacro {
             self.bits = 8;
 
             self.pack_list.extend(quote! {
-                dst.push(b);
+                dst[offset] = b;
+                offset += 1;
             });
 
             self.unpack_list.extend(quote! {
@@ -122,13 +130,20 @@ impl BitWrapMacro {
         };
 
         if self.bits == 8 {
+            let bytes = (bits + 7) / 8;
+
             self.pack_list.extend(quote! {
+                if #bytes + offset > dst.len() {
+                    return #bytes + offset;
+                }
+
                 let b = 0;
             });
 
             self.unpack_list.extend(quote! {
-                debug_assert!(src.len() >= ((#bits + 7) / 8 + offset),
-                    "array length is to short for BitWrap");
+                if #bytes + offset > src.len() {
+                    return #bytes + offset;
+                }
             });
         }
 
@@ -138,8 +153,8 @@ impl BitWrapMacro {
             let v = ((value >> shift) as u8) & mask;
 
             self.pack_list.extend(quote! {
-                let b = b | #v;
-                dst.push(b);
+                dst[offset] = b | #v;
+                offset += 1;
                 let b = 0;
             });
 
@@ -164,7 +179,8 @@ impl BitWrapMacro {
             self.bits = 8;
 
             self.pack_list.extend(quote! {
-                dst.push(b);
+                dst[offset] = b;
+                offset += 1;
             });
 
             self.unpack_list.extend(quote! {
@@ -179,7 +195,7 @@ impl BitWrapMacro {
         let ident = &field.ident;
 
         self.pack_list.extend(quote! {
-            self.#ident.pack(dst);
+            offset += self.#ident.pack(&mut (&mut dst[offset ..]));
         });
 
         self.unpack_list.extend(quote! {
@@ -233,10 +249,11 @@ impl BitWrapMacro {
 
         quote! {
             impl BitWrap for #struct_id {
-                fn pack(&self, dst: &mut Vec<u8>) -> usize {
-                    let len = dst.len();
+                fn pack<R: AsMut<[u8]>>(&self, dst: &mut R) -> usize {
+                    let mut dst = dst.as_mut();
+                    let mut offset: usize = 0;
                     #pack_list
-                    dst.len() - len
+                    offset
                 }
 
                 fn unpack<R: AsRef<[u8]>>(&mut self, src: R) -> usize {
