@@ -195,7 +195,7 @@ impl BitWrapMacro {
         let ident = &field.ident;
 
         self.pack_list.extend(quote! {
-            offset += self.#ident.pack(&mut (&mut dst[offset ..]));
+            offset += self.#ident.pack(&mut dst[offset ..]);
         });
 
         self.unpack_list.extend(quote! {
@@ -249,15 +249,13 @@ impl BitWrapMacro {
 
         quote! {
             impl BitWrap for #struct_id {
-                fn pack<R: AsMut<[u8]>>(&self, dst: &mut R) -> usize {
-                    let mut dst = dst.as_mut();
+                fn pack(&self, dst: &mut [u8]) -> usize {
                     let mut offset: usize = 0;
                     #pack_list
                     offset
                 }
 
-                fn unpack<R: AsRef<[u8]>>(&mut self, src: R) -> usize {
-                    let src = src.as_ref();
+                fn unpack(&mut self, src: &[u8]) -> usize {
                     let mut offset: usize = 0;
                     #unpack_list
                     offset

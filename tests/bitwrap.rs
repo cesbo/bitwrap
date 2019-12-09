@@ -21,15 +21,13 @@ fn test_bitwrap() {
     }
 
     impl BitWrap for HW {
-        fn pack<R: AsMut<[u8]>>(&self, dst: &mut R) -> usize {
-            let dst = dst.as_mut();
+        fn pack(&self, dst: &mut [u8]) -> usize {
             assert!(dst.len() >= 6);
             (&mut dst[.. 6]).clone_from_slice(&self.inner);
             6
         }
 
-        fn unpack<R: AsRef<[u8]>>(&mut self, src: R) -> usize {
-            let src = src.as_ref();
+        fn unpack(&mut self, src: &[u8]) -> usize {
             assert!(src.len() >= 6);
             self.inner.clone_from_slice(&src[.. 6]);
             6
@@ -59,15 +57,13 @@ fn test_bitwrap() {
     }
 
     impl BitWrap for IpAddr {
-        fn pack<R: AsMut<[u8]>>(&self, dst: &mut R) -> usize {
-            let dst = dst.as_mut();
+        fn pack(&self, dst: &mut [u8]) -> usize {
             assert!(dst.len() >= 4);
             (&mut dst[.. 4]).clone_from_slice(&self.inner.octets());
             4
         }
 
-        fn unpack<R: AsRef<[u8]>>(&mut self, src: R) -> usize {
-            let src = src.as_ref();
+        fn unpack(&mut self, src: &[u8]) -> usize {
             assert!(src.len() >= 4);
             self.inner = Ipv4Addr::from(unsafe { *(src.as_ptr() as *const [u8; 4]) });
             4
