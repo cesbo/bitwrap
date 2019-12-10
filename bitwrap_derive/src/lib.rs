@@ -48,7 +48,7 @@ impl BitWrapMacro {
                     return #bytes + offset;
                 }
 
-                let b = 0;
+                dst[offset] =
             });
 
             self.unpack_list.extend(quote! {
@@ -67,9 +67,9 @@ impl BitWrapMacro {
             let mask = 0xFFu8 >> (8 - self.bits);
 
             self.pack_list.extend(quote! {
-                dst[offset] = b | (((self.#ident >> #shift) as u8) & #mask);
+                (((self.#ident >> #shift) as u8) & #mask);
                 offset += 1;
-                let b = 0;
+                dst[offset] =
             });
 
             self.unpack_list.extend(quote! {
@@ -80,38 +80,30 @@ impl BitWrapMacro {
             self.bits = 8;
         }
 
-        let shift = self.bits - bits; // byte right shift
+        self.bits -= bits;
+
+        let shift = self.bits; // byte right shift
         let mask = 0xFFu8 >> (8 - bits);
 
-        if shift != 0 {
+        if shift == 0 {
             self.pack_list.extend(quote! {
-                let b = b | (((self.#ident as u8) & #mask) << #shift);
-            });
-
-            self.unpack_list.extend(quote! {
-                (((src[offset] >> #shift) & #mask) as #ty);
-            });
-        } else {
-            self.pack_list.extend(quote! {
-                let b = b | ((self.#ident as u8) & #mask);
+                ((self.#ident as u8) & #mask);
+                offset += 1;
             });
 
             self.unpack_list.extend(quote! {
                 ((src[offset] & #mask) as #ty);
-            });
-        }
-
-        self.bits -= bits;
-        if self.bits == 0 {
-            self.bits = 8;
-
-            self.pack_list.extend(quote! {
-                dst[offset] = b;
                 offset += 1;
+            });
+
+            self.bits = 8;
+        } else {
+            self.pack_list.extend(quote! {
+                (((self.#ident as u8) & #mask) << #shift) |
             });
 
             self.unpack_list.extend(quote! {
-                offset += 1;
+                (((src[offset] >> #shift) & #mask) as #ty);
             });
         }
     }
@@ -137,7 +129,7 @@ impl BitWrapMacro {
                     return #bytes + offset;
                 }
 
-                let b = 0;
+                dst[offset] =
             });
 
             self.unpack_list.extend(quote! {
@@ -153,9 +145,9 @@ impl BitWrapMacro {
             let v = ((value >> shift) as u8) & mask;
 
             self.pack_list.extend(quote! {
-                dst[offset] = b | #v;
+                #v;
                 offset += 1;
-                let b = 0;
+                dst[offset] =
             });
 
             self.unpack_list.extend(quote! {
@@ -166,26 +158,27 @@ impl BitWrapMacro {
             self.bits = 8;
         }
 
-        let shift = self.bits - bits; // byte right shift
+        self.bits -= bits;
+
+        let shift = self.bits; // byte right shift
         let mask = 0xFFu8 >> (8 - bits);
         let v = ((value as u8) & mask) << shift;
 
-        self.pack_list.extend(quote! {
-            let b = b | #v;
-        });
-
-        self.bits -= bits;
-        if self.bits == 0 {
-            self.bits = 8;
-
+        if shift == 0 {
             self.pack_list.extend(quote! {
-                dst[offset] = b;
+                #v;
                 offset += 1;
             });
 
             self.unpack_list.extend(quote! {
                 offset += 1;
             });
+
+            self.bits = 8;
+        } else {
+            self.pack_list.extend(quote! {
+                #v |
+            })
         }
     }
 
