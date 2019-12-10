@@ -14,40 +14,39 @@ For example packet has next format:
 
 | Field | Bits |
 |---|---|
-| f1 | 1 |
-| f2 | 1 |
-| f3 | 2 |
-| f4 | 4 |
-| f5 | 16 |
+| flag_1 | 1 |
+| flag_2 | 1 |
+| data_3 | 2 |
+| data_4 | 12 |
 
 ```rust
+#![no_std]
+
 use bitwrap::*;
 
 #[derive(Default, BitWrap)]
 struct Packet {
-    #[bits(1)] f1: u8,
-    #[bits(1)] f2: u8,
-    #[bits(2)] f3: u8,
-    #[bits(4)] f4: u8,
-    #[bits(16)] f5: u16,
+    #[bits(1)] flag_1: u8,
+    #[bits(1)] flag_2: u8,
+    #[bits(2)] data_3: u8,
+    #[bits(12)] data_4: u16,
 }
 
-const DATA: &[u8] = &[0xAA, 0x12, 0x34];
+const DATA: &[u8] = &[0xA2, 0x34];
 
 let mut packet = Packet::default();
 packet.unpack(DATA);
 
-assert_eq!(packet.f1, 1);
-assert_eq!(packet.f2, 0);
-assert_eq!(packet.f3, 2);
-assert_eq!(packet.f4, 0x0A);
-assert_eq!(packet.f5, 0x1234);
+assert_eq!(packet.flag_1, 1);
+assert_eq!(packet.flag_2, 0);
+assert_eq!(packet.data_3, 2);
+assert_eq!(packet.data_4, 0x0234);
 
-let mut buffer: Vec<u8> = Vec::new();
-buffer.resize(3, 0);
+let mut buffer: [u8; 2] = [0; 2];
 let result = packet.pack(&mut buffer);
 
-assert_eq!(&buffer[.. result], DATA);
+assert_eq!(result, DATA.len());
+assert_eq!(buffer, DATA);
 ```
 
 ## Nested objects
