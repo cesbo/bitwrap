@@ -32,13 +32,55 @@ impl BitWrapMacro {
     }
 
     fn build_field_bits(&mut self, field: &syn::Field, meta_list: &syn::MetaList) {
-        let mut bits = match meta_list.nested.first() {
+        let mut iter = meta_list.nested.iter();
+
+        let mut bits = match iter.next() {
             Some(syn::NestedMeta::Lit(syn::Lit::Int(v))) => v.base10_parse::<usize>().unwrap(),
-            _ => panic!("bits value should be a number"),
+            _ => panic!("bits first argument should be a number"),
         };
 
-        let ty = &field.ty;
+        let mut ty = TokenStream::new();
         let ident = &field.ident;
+
+        let mut convert_from: Option<&Ident> = None;
+        let mut convert_to: Option<&Ident> = None;
+
+        for item in iter {
+            match item {
+                syn::NestedMeta::Meta(syn::Meta::List(arg)) if arg.path.is_ident("convert") => {
+                    let mut nested = arg.nested.iter();
+
+                    if let Some(syn::NestedMeta::Meta(syn::Meta::Path(v))) = nested.next() {
+                        let convert_ty = v.get_ident();
+                        ty.extend(quote! {
+                            #convert_ty
+                        });
+                    } else {
+                        panic!("bits convert argument #1 should be a type");
+                    }
+
+                    if let Some(syn::NestedMeta::Meta(syn::Meta::Path(v))) = nested.next() {
+                        convert_from = v.get_ident();
+                    } else {
+                        panic!("bits convert argument #2 should be a function");
+                    }
+
+                    if let Some(syn::NestedMeta::Meta(syn::Meta::Path(v))) = nested.next() {
+                        convert_to = v.get_ident();
+                    } else {
+                        panic!("bits convert argument #3 should be a function");
+                    }
+                }
+                _ => panic!("bits has wrong arguments format"),
+            }
+        }
+
+        if ty.is_empty() {
+            let field_ty = &field.ty;
+            ty.extend(quote! {
+                #field_ty
+            });
+        }
 
         if self.bits == 8 {
             let bytes = (bits + 7) / 8;
@@ -48,7 +90,7 @@ impl BitWrapMacro {
                     return #bytes + offset;
                 }
 
-                dst[offset] =
+                dst[offset] = 0;
             });
 
             self.unpack_list.extend(quote! {
@@ -58,8 +100,18 @@ impl BitWrapMacro {
             });
         }
 
+        if let Some(v) = convert_from {
+            self.pack_list.extend(quote! {
+                let value = Self::#v ( self.#ident );
+            });
+        } else {
+            self.pack_list.extend(quote! {
+                let value = self.#ident;
+            });
+        }
+
         self.unpack_list.extend(quote! {
-            self.#ident =
+            let mut value: #ty = 0;
         });
 
         while bits > self.bits {
@@ -67,13 +119,14 @@ impl BitWrapMacro {
             let mask = 0xFFu8 >> (8 - self.bits);
 
             self.pack_list.extend(quote! {
-                (((self.#ident >> #shift) as u8) & #mask);
+                dst[offset] |= ((value >> #shift) as u8) & #mask;
                 offset += 1;
-                dst[offset] =
+                dst[offset] = 0;
             });
 
             self.unpack_list.extend(quote! {
-                (((src[{ let x = offset; offset += 1; x }] & #mask) as #ty) << #shift) |
+                value |= ((src[offset] & #mask) as #ty) << #shift;
+                offset += 1;
             });
 
             bits -= self.bits;
@@ -87,23 +140,33 @@ impl BitWrapMacro {
 
         if shift == 0 {
             self.pack_list.extend(quote! {
-                ((self.#ident as u8) & #mask);
+                dst[offset] |= (value as u8) & #mask;
                 offset += 1;
             });
 
             self.unpack_list.extend(quote! {
-                ((src[offset] & #mask) as #ty);
+                value |= (src[offset] & #mask) as #ty;
                 offset += 1;
             });
 
             self.bits = 8;
         } else {
             self.pack_list.extend(quote! {
-                (((self.#ident as u8) & #mask) << #shift) |
+                dst[offset] |= ((value as u8) & #mask) << #shift;
             });
 
             self.unpack_list.extend(quote! {
-                (((src[offset] >> #shift) & #mask) as #ty);
+                value |= ((src[offset] >> #shift) & #mask) as #ty;
+            });
+        }
+
+        if let Some(v) = convert_to {
+            self.unpack_list.extend(quote! {
+                self.#ident = Self::#v ( value );
+            });
+        } else {
+            self.unpack_list.extend(quote! {
+                self.#ident = value;
             });
         }
     }
@@ -129,7 +192,7 @@ impl BitWrapMacro {
                     return #bytes + offset;
                 }
 
-                dst[offset] =
+                dst[offset] = 0;
             });
 
             self.unpack_list.extend(quote! {
@@ -145,9 +208,9 @@ impl BitWrapMacro {
             let v = ((value >> shift) as u8) & mask;
 
             self.pack_list.extend(quote! {
-                #v;
+                dst[offset] |= #v;
                 offset += 1;
-                dst[offset] =
+                dst[offset] = 0;
             });
 
             self.unpack_list.extend(quote! {
@@ -164,9 +227,12 @@ impl BitWrapMacro {
         let mask = 0xFFu8 >> (8 - bits);
         let v = ((value as u8) & mask) << shift;
 
+        self.pack_list.extend(quote! {
+            dst[offset] |= #v;
+        });
+
         if shift == 0 {
             self.pack_list.extend(quote! {
-                #v;
                 offset += 1;
             });
 
@@ -175,10 +241,6 @@ impl BitWrapMacro {
             });
 
             self.bits = 8;
-        } else {
-            self.pack_list.extend(quote! {
-                #v |
-            })
         }
     }
 

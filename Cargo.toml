@@ -1,6 +1,6 @@
 [package]
 name = "bitwrap"
-version = "0.2.2"
+version = "0.2.3"
 authors = ["Cesbo Developers Team"]
 categories = [
     "data-structures",
@@ -30,4 +30,4 @@ default = [
 members = [".", "bitwrap_derive"]
 
 [dependencies]
-bitwrap_derive = { path = "./bitwrap_derive", version = "0.2.2" }
+bitwrap_derive = { path = "./bitwrap_derive", version = "0.2.3" }
