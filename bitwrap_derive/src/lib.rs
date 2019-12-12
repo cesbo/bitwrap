@@ -39,8 +39,23 @@ impl BitWrapMacro {
             _ => panic!("bits first argument should be a number"),
         };
 
-        let mut ty = TokenStream::new();
-        let ident = &field.ident;
+        if bits == 0 || bits > 64 {
+            panic!("bits should be in range 1 .. 64");
+        }
+
+        let field_ty = &field.ty;
+        let field_ident = &field.ident;
+
+        let convert_ty = if bits <= 8 {
+            "u8"
+        } else if bits <= 16 {
+            "u16"
+        } else if bits <= 32 {
+            "u32"
+        } else {
+            "u64"
+        };
+        let ty = Ident::new(convert_ty, proc_macro2::Span::call_site());
 
         let mut convert_from: Option<&Ident> = None;
         let mut convert_to: Option<&Ident> = None;
@@ -51,35 +66,19 @@ impl BitWrapMacro {
                     let mut nested = arg.nested.iter();
 
                     if let Some(syn::NestedMeta::Meta(syn::Meta::Path(v))) = nested.next() {
-                        let convert_ty = v.get_ident();
-                        ty.extend(quote! {
-                            #convert_ty
-                        });
-                    } else {
-                        panic!("bits convert argument #1 should be a type");
-                    }
-
-                    if let Some(syn::NestedMeta::Meta(syn::Meta::Path(v))) = nested.next() {
                         convert_from = v.get_ident();
                     } else {
-                        panic!("bits convert argument #2 should be a function");
+                        panic!("bits convert argument #1 should be a function");
                     }
 
                     if let Some(syn::NestedMeta::Meta(syn::Meta::Path(v))) = nested.next() {
                         convert_to = v.get_ident();
                     } else {
-                        panic!("bits convert argument #3 should be a function");
+                        panic!("bits convert argument #2 should be a function");
                     }
                 }
                 _ => panic!("bits has wrong arguments format"),
             }
-        }
-
-        if ty.is_empty() {
-            let field_ty = &field.ty;
-            ty.extend(quote! {
-                #field_ty
-            });
         }
 
         if self.bits == 8 {
@@ -102,11 +101,11 @@ impl BitWrapMacro {
 
         if let Some(v) = convert_from {
             self.pack_list.extend(quote! {
-                let value = Self::#v ( self.#ident );
+                let value = Self::#v ( self.#field_ident ) as #ty;
             });
         } else {
             self.pack_list.extend(quote! {
-                let value = self.#ident;
+                let value = self.#field_ident as #ty;
             });
         }
 
@@ -162,11 +161,11 @@ impl BitWrapMacro {
 
         if let Some(v) = convert_to {
             self.unpack_list.extend(quote! {
-                self.#ident = Self::#v ( value );
+                self.#field_ident = Self::#v ( value ) as #field_ty;
             });
         } else {
             self.unpack_list.extend(quote! {
-                self.#ident = value;
+                self.#field_ident = value as #field_ty;
             });
         }
     }

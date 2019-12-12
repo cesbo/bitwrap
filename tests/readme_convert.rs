@@ -6,8 +6,8 @@ fn test_readme_convert() {
     #[derive(Default, BitWrap)]
     struct Packet {
         #[bits_skip(6, 0)]
-        #[bits(1, convert(u8, from_bool, to_bool))] flag_1: bool,
-        #[bits(1, convert(u8, from_bool, to_bool))] flag_2: bool,
+        #[bits(1, convert(from_bool, to_bool))] flag_1: bool,
+        #[bits(1, convert(from_bool, to_bool))] flag_2: bool,
     }
 
     impl Packet {
