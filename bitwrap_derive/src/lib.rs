@@ -104,9 +104,18 @@ impl BitWrapMacro {
                 let value = Self::#v ( self.#field_ident ) as #ty;
             });
         } else {
-            self.pack_list.extend(quote! {
-                let value = self.#field_ident as #ty;
-            });
+            match field_ty {
+                syn::Type::Path(v) if v.path.is_ident("bool") => {
+                    self.pack_list.extend(quote! {
+                        let value = if self.#field_ident { 1 } else { 0 };
+                    });
+                }
+                _ => {
+                    self.pack_list.extend(quote! {
+                        let value = self.#field_ident as #ty;
+                    });
+                }
+            }
         }
 
         self.unpack_list.extend(quote! {
@@ -164,9 +173,18 @@ impl BitWrapMacro {
                 self.#field_ident = Self::#v ( value ) as #field_ty;
             });
         } else {
-            self.unpack_list.extend(quote! {
-                self.#field_ident = value as #field_ty;
-            });
+            match field_ty {
+                syn::Type::Path(v) if v.path.is_ident("bool") => {
+                    self.unpack_list.extend(quote! {
+                        self.#field_ident = value != 0;
+                    });
+                }
+                _ => {
+                    self.unpack_list.extend(quote! {
+                        self.#field_ident = value as #field_ty;
+                    });
+                }
+            }
         }
     }
 
