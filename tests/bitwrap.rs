@@ -21,16 +21,22 @@ fn test_bitwrap() {
     }
 
     impl BitWrap for HW {
-        fn pack(&self, dst: &mut [u8]) -> usize {
-            assert!(dst.len() >= 6);
-            (&mut dst[.. 6]).clone_from_slice(&self.inner);
-            6
+        fn pack(&self, dst: &mut [u8]) -> Result<usize, BitWrapError> {
+            if dst.len() >= 6 {
+                (&mut dst[.. 6]).clone_from_slice(&self.inner);
+                Ok(6)
+            } else {
+                Err(BitWrapError)
+            }
         }
 
-        fn unpack(&mut self, src: &[u8]) -> usize {
-            assert!(src.len() >= 6);
-            self.inner.clone_from_slice(&src[.. 6]);
-            6
+        fn unpack(&mut self, src: &[u8]) -> Result<usize, BitWrapError> {
+            if src.len() >= 6 {
+                self.inner.clone_from_slice(&src[.. 6]);
+                Ok(6)
+            } else {
+                Err(BitWrapError)
+            }
         }
     }
 
@@ -83,7 +89,7 @@ fn test_bitwrap() {
     }
 
     let mut packet = Packet::default();
-    let result = packet.unpack(DATA);
+    let result = packet.unpack(DATA).unwrap();
 
     assert_eq!(result, DATA.len());
     assert_eq!(packet.eth.dst.inner, [0x00, 0x04, 0x76, 0xDD, 0xBB, 0x3A]);
@@ -105,7 +111,7 @@ fn test_bitwrap() {
 
     let mut buffer: Vec<u8> = Vec::new();
     buffer.resize(64, 0);
-    let result = packet.pack(&mut buffer);
+    let result = packet.pack(&mut buffer).unwrap();
 
     assert_eq!(result, DATA.len());
     assert_eq!(&buffer[.. result], DATA);

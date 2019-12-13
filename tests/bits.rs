@@ -18,7 +18,7 @@ fn test_bits() {
     }
 
     let mut packet = Packet::default();
-    let result = packet.unpack(DATA);
+    let result = packet.unpack(DATA).unwrap();
 
     assert_eq!(result, DATA.len());
     assert_eq!(packet.rshift_test, 0x29);
@@ -32,7 +32,7 @@ fn test_bits() {
 
     let mut buffer: Vec<u8> = Vec::new();
     buffer.resize(64, 0);
-    let result = packet.pack(&mut buffer);
+    let result = packet.pack(&mut buffer).unwrap();
 
     assert_eq!(result, DATA.len());
     assert_eq!(&buffer[.. result], DATA);
@@ -49,13 +49,13 @@ fn test_bits_overflow() {
     }
 
     let mut packet = Packet::default();
-    let result = packet.unpack(DATA);
+    let result = packet.unpack(DATA).unwrap();
     assert_eq!(result, DATA.len());
     assert_eq!(packet.value, 0xAA);
 
     let mut buffer: Vec<u8> = Vec::new();
     buffer.resize(64, 0);
-    let result = packet.pack(&mut buffer);
+    let result = packet.pack(&mut buffer).unwrap();
 
     assert_eq!(result, DATA.len());
     assert_eq!(&buffer[.. result], DATA);
@@ -72,6 +72,8 @@ fn test_overflow() {
     }
 
     let mut packet = Packet::default();
-    let result = packet.unpack(DATA);
-    assert_eq!(result, 4);
+    match packet.unpack(DATA) {
+        Err(BitWrapError) => {}
+        _ => unreachable!(),
+    };
 }

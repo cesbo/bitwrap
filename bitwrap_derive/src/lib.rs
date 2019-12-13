@@ -93,7 +93,7 @@ impl BitWrapMacro {
 
             self.pack_list.extend(quote! {
                 if #bytes + offset > dst.len() {
-                    return #bytes + offset;
+                    return Err(bitwrap::BitWrapError);
                 }
 
                 dst[offset] = 0;
@@ -101,7 +101,7 @@ impl BitWrapMacro {
 
             self.unpack_list.extend(quote! {
                 if #bytes + offset > src.len() {
-                    return #bytes + offset;
+                    return Err(bitwrap::BitWrapError);
                 }
             });
         }
@@ -213,7 +213,7 @@ impl BitWrapMacro {
 
             self.pack_list.extend(quote! {
                 if #bytes + offset > dst.len() {
-                    return #bytes + offset;
+                    return Err(bitwrap::BitWrapError);
                 }
 
                 dst[offset] = 0;
@@ -221,7 +221,7 @@ impl BitWrapMacro {
 
             self.unpack_list.extend(quote! {
                 if #bytes + offset > src.len() {
-                    return #bytes + offset;
+                    return Err(bitwrap::BitWrapError);
                 }
             });
         }
@@ -274,11 +274,11 @@ impl BitWrapMacro {
         let ident = &field.ident;
 
         self.pack_list.extend(quote! {
-            offset += self.#ident.pack(&mut dst[offset ..]);
+            offset += self.#ident.pack(&mut dst[offset ..])?;
         });
 
         self.unpack_list.extend(quote! {
-            offset += self.#ident.unpack(&src[offset ..]);
+            offset += self.#ident.unpack(&src[offset ..])?;
         });
     }
 
@@ -327,17 +327,17 @@ impl BitWrapMacro {
         let unpack_list = &self.unpack_list;
 
         quote! {
-            impl BitWrap for #struct_id {
-                fn pack(&self, dst: &mut [u8]) -> usize {
+            impl bitwrap::BitWrap for #struct_id {
+                fn pack(&self, dst: &mut [u8]) -> Result<usize, BitWrapError> {
                     let mut offset: usize = 0;
                     #pack_list
-                    offset
+                    Ok(offset)
                 }
 
-                fn unpack(&mut self, src: &[u8]) -> usize {
+                fn unpack(&mut self, src: &[u8]) -> Result<usize, BitWrapError> {
                     let mut offset: usize = 0;
                     #unpack_list
-                    offset
+                    Ok(offset)
                 }
             }
         }

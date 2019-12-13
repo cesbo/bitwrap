@@ -16,7 +16,7 @@ fn test_readme_no_std() {
     const DATA: &[u8] = &[0xA2, 0x34];
 
     let mut packet = Packet::default();
-    packet.unpack(DATA);
+    packet.unpack(DATA).unwrap();
 
     assert_eq!(packet.flag_1, 1);
     assert_eq!(packet.flag_2, 0);
@@ -24,7 +24,7 @@ fn test_readme_no_std() {
     assert_eq!(packet.data_4, 0x0234);
 
     let mut buffer: [u8; 2] = [0; 2];
-    let result = packet.pack(&mut buffer);
+    let result = packet.pack(&mut buffer).unwrap();
 
     assert_eq!(result, DATA.len());
     assert_eq!(buffer, DATA);

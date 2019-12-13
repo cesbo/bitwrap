@@ -26,7 +26,7 @@ fn test_readme_nested() {
         dst: Ipv4Addr::new(0, 0, 0, 0),
     };
 
-    packet.unpack(DATA);
+    packet.unpack(DATA).unwrap();
 
     assert_eq!(packet.ttl, 64);
     assert_eq!(packet.protocol, 136);
@@ -36,7 +36,7 @@ fn test_readme_nested() {
 
     let mut buffer: Vec<u8> = Vec::new();
     buffer.resize(32, 0);
-    let result = packet.pack(&mut buffer);
+    let result = packet.pack(&mut buffer).unwrap();
 
     assert_eq!(&buffer[.. result], DATA);
 }

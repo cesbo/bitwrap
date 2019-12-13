@@ -1,6 +1,5 @@
 #![no_std]
 
-
 use bitwrap::*;
 
 
@@ -53,12 +52,12 @@ fn test_readme_convert() {
     const DATA: &[u8] = &[0x01];
 
     let mut packet = Packet::default();
-    packet.unpack(DATA);
+    packet.unpack(DATA).unwrap();
 
     assert_eq!(packet.coffee, Coffee::Latte);
 
     let mut buffer: [u8; 1] = [0; 1];
-    let result = packet.pack(&mut buffer);
+    let result = packet.pack(&mut buffer).unwrap();
 
     assert_eq!(&buffer[.. result], DATA);
 }

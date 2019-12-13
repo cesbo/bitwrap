@@ -7,7 +7,7 @@
 bitwrap is a derive macro and trait to declare a struct data member
 with explicit size, in bits.
 
-## Example
+## Bitfield
 
 `bits` attribute accept only one argument - field size in bits.
 For example packet has next format:
@@ -35,7 +35,7 @@ struct Packet {
 const DATA: &[u8] = &[0xA2, 0x34];
 
 let mut packet = Packet::default();
-packet.unpack(DATA);
+packet.unpack(DATA).unwrap();
 
 assert_eq!(packet.flag_1, 1);
 assert_eq!(packet.flag_2, 0);
@@ -43,7 +43,7 @@ assert_eq!(packet.data_3, 2);
 assert_eq!(packet.data_4, 0x0234);
 
 let mut buffer: [u8; 2] = [0; 2];
-let result = packet.pack(&mut buffer);
+let result = packet.pack(&mut buffer).unwrap();
 
 assert_eq!(result, DATA.len());
 assert_eq!(buffer, DATA);
@@ -89,7 +89,7 @@ let mut packet = IP4 {
     dst: Ipv4Addr::new(0, 0, 0, 0),
 };
 
-packet.unpack(DATA);
+packet.unpack(DATA).unwrap();
 
 assert_eq!(packet.ttl, 64);
 assert_eq!(packet.protocol, 136);
@@ -99,7 +99,7 @@ assert_eq!(packet.dst, Ipv4Addr::new(192, 168, 200, 183));
 
 let mut buffer: Vec<u8> = Vec::new();
 buffer.resize(32, 0);
-let result = packet.pack(&mut buffer);
+let result = packet.pack(&mut buffer).unwrap();
 
 assert_eq!(&buffer[.. result], DATA);
 ```
@@ -136,14 +136,14 @@ struct Packet {
 const DATA: &[u8] = &[0xAC, 0xF5];
 
 let mut packet = Packet::default();
-packet.unpack(DATA);
+packet.unpack(DATA).unwrap();
 
 assert_eq!(packet.f1, 0x2B);
 assert_eq!(packet.f2, 0x05);
 
 let mut buffer: Vec<u8> = Vec::new();
 buffer.resize(2, 0);
-let result = packet.pack(&mut buffer);
+let result = packet.pack(&mut buffer).unwrap();
 
 assert_eq!(&buffer[.. result], DATA);
 ```
@@ -219,12 +219,12 @@ struct Packet {
 const DATA: &[u8] = &[0x01];
 
 let mut packet = Packet::default();
-packet.unpack(DATA);
+packet.unpack(DATA).unwrap();
 
 assert_eq!(packet.coffee, Coffee::Latte);
 
 let mut buffer: [u8; 1] = [0; 1];
-let result = packet.pack(&mut buffer);
+let result = packet.pack(&mut buffer).unwrap();
 
 assert_eq!(&buffer[.. result], DATA);
 ```
