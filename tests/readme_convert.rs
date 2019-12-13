@@ -1,3 +1,6 @@
+#![no_std]
+
+
 use bitwrap::*;
 
 
@@ -56,7 +59,7 @@ fn test_readme_convert() {
     #[derive(Default, BitWrap)]
     struct Packet {
         #[bits_skip(4)]
-        #[bits(4, convert(Coffee::from, Coffee::into))] coffee: Coffee,
+        #[bits(4, convert())] coffee: Coffee,
     }
 
     const DATA: &[u8] = &[0x01];

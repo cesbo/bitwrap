@@ -63,18 +63,25 @@ impl BitWrapMacro {
         for item in iter {
             match item {
                 syn::NestedMeta::Meta(syn::Meta::List(arg)) if arg.path.is_ident("convert") => {
-                    let mut nested = arg.nested.iter();
+                    if arg.nested.is_empty() {
+                        convert_from.extend(quote! { #field_ty::from });
+                        convert_into.extend(quote! { #field_ty::into });
+                    } else if arg.nested.len() == 2 {
+                        let mut nested = arg.nested.iter();
 
-                    if let Some(syn::NestedMeta::Meta(syn::Meta::Path(v))) = nested.next() {
-                        convert_from.extend(quote! { #v });
-                    } else {
-                        panic!("bits convert argument #1 should be a function");
-                    }
+                        if let Some(syn::NestedMeta::Meta(syn::Meta::Path(v))) = nested.next() {
+                            convert_from.extend(quote! { #v });
+                        } else {
+                            panic!("bits convert argument #1 should be a function");
+                        }
 
-                    if let Some(syn::NestedMeta::Meta(syn::Meta::Path(v))) = nested.next() {
-                        convert_into.extend(quote! { #v });
+                        if let Some(syn::NestedMeta::Meta(syn::Meta::Path(v))) = nested.next() {
+                            convert_into.extend(quote! { #v });
+                        } else {
+                            panic!("bits convert argument #2 should be a function");
+                        }
                     } else {
-                        panic!("bits convert argument #2 should be a function");
+                        panic!("bits convert wrong format");
                     }
                 }
                 _ => panic!("bits has wrong arguments format"),

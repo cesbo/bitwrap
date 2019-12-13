@@ -4,7 +4,7 @@
 
 ## Intro
 
-bitwrap is a derive macro and interface to declare a struct data member
+bitwrap is a derive macro and trait to declare a struct data member
 with explicit size, in bits.
 
 ## Example
@@ -155,14 +155,16 @@ Here is numerical type means an unsigned number that enough to contain all data.
 Field type means a type of the struct field.
 
 For example `bits(1)` - numerical type will be `u8`.
-If the field type will be `bool` then conversion code will be appended.
+If the field type is `bool` then conversion code will be appended automatically.
 
-For other types or for value conversion you may use addition option - `bits(1, convert(from, into))`:
+For other types or for value conversion you may use addition
+option - `bits(1, convert(from, into))`:
 
 - `from` - method to convert field type from numeric type
 - `into` - method to convert numeric type into field type
 
-In example it uses to convert u8 to/from bool
+If conversion methods not defined - `bits(1, convert())` will be used
+From and Into traits for field type.
 
 | Field | Bits |
 |---|---|
@@ -223,7 +225,7 @@ impl Into<u8> for Coffee {
 #[derive(Default, BitWrap)]
 struct Packet {
     #[bits_skip(4)]
-    #[bits(4, convert(Coffee::from, Coffee::into))] coffee: Coffee,
+    #[bits(4, convert())] coffee: Coffee,
 }
 
 const DATA: &[u8] = &[0x01];
