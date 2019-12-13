@@ -6,7 +6,7 @@ use bitwrap::*;
 
 #[test]
 fn test_readme_convert() {
-    #[derive(Debug, PartialEq, Copy)]
+    #[derive(Debug, PartialEq, Clone, Copy)]
     enum Coffee {
         Water,
         Latte,
@@ -17,18 +17,6 @@ fn test_readme_convert() {
 
     impl Default for Coffee {
         fn default() -> Self { Coffee::Water }
-    }
-
-    impl Clone for Coffee {
-        fn clone(&self) -> Self {
-            match self {
-                Coffee::Water => Coffee::Water,
-                Coffee::Latte => Coffee::Latte,
-                Coffee::Cappuccino => Coffee::Cappuccino,
-                Coffee::Espresso => Coffee::Espresso,
-                Coffee::Americano => Coffee::Americano,
-            }
-        }
     }
 
     impl From<u8> for Coffee {

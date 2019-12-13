@@ -172,7 +172,7 @@ From and Into traits for field type.
 | Coffee | 4 |
 
 ```rust
-#[derive(Debug, PartialEq, Copy)]
+#[derive(Debug, PartialEq, Clone, Copy)]
 enum Coffee {
     Water,
     Latte,
@@ -183,18 +183,6 @@ enum Coffee {
 
 impl Default for Coffee {
     fn default() -> Self { Coffee::Water }
-}
-
-impl Clone for Coffee {
-    fn clone(&self) -> Self {
-        match self {
-            Coffee::Water => Coffee::Water,
-            Coffee::Latte => Coffee::Latte,
-            Coffee::Cappuccino => Coffee::Cappuccino,
-            Coffee::Espresso => Coffee::Espresso,
-            Coffee::Americano => Coffee::Americano,
-        }
-    }
 }
 
 impl From<u8> for Coffee {
