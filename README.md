@@ -148,45 +148,90 @@ let result = packet.pack(&mut buffer);
 assert_eq!(&buffer[.. result], DATA);
 ```
 
-## Convert values
+## Types converter
 
-`convert` is an additional option for `bits` atttribute. Accept 3 arguments:
+This feature converts numerical type into the field type.
+Here is numerical type means an unsigned number that enough to contain all data.
+Field type means a type of the struct field.
 
-- `type` - is a numeric type
+For example `bits(1)` - numerical type will be `u8`.
+If the field type will be `bool` then conversion code will be appended.
+
+For other types or for value conversion you may use addition option - `bits(1, convert(from, into))`:
+
 - `from` - method to convert field type from numeric type
-- `to` - method to convert numeric type to field type
+- `into` - method to convert numeric type into field type
 
 In example it uses to convert u8 to/from bool
 
 | Field | Bits |
 |---|---|
-| Reserved | 6 |
-| Flag_1 | 1 |
-| Flag_2 | 1 |
+| Reserved | 4 |
+| Coffee | 4 |
 
 ```rust
+#[derive(Debug, PartialEq, Copy)]
+enum Coffee {
+    Water,
+    Latte,
+    Cappuccino,
+    Espresso,
+    Americano,
+}
+
+impl Default for Coffee {
+    fn default() -> Self { Coffee::Water }
+}
+
+impl Clone for Coffee {
+    fn clone(&self) -> Self {
+        match self {
+            Coffee::Water => Coffee::Water,
+            Coffee::Latte => Coffee::Latte,
+            Coffee::Cappuccino => Coffee::Cappuccino,
+            Coffee::Espresso => Coffee::Espresso,
+            Coffee::Americano => Coffee::Americano,
+        }
+    }
+}
+
+impl From<u8> for Coffee {
+    fn from(value: u8) -> Self {
+        match value {
+            0 => Coffee::Water,
+            1 => Coffee::Latte,
+            2 => Coffee::Cappuccino,
+            3 => Coffee::Espresso,
+            4 => Coffee::Americano,
+            _ => unreachable!(),
+        }
+    }
+}
+
+impl Into<u8> for Coffee {
+    fn into(self) -> u8 {
+        match self {
+            Coffee::Water => 0,
+            Coffee::Latte => 1,
+            Coffee::Cappuccino => 2,
+            Coffee::Espresso => 3,
+            Coffee::Americano => 4,
+        }
+    }
+}
+
 #[derive(Default, BitWrap)]
 struct Packet {
-    #[bits_skip(6, 0)]
-    #[bits(1, convert(u8, from_bool, to_bool))] flag_1: bool,
-    #[bits(1, convert(u8, from_bool, to_bool))] flag_2: bool,
+    #[bits_skip(4)]
+    #[bits(4, convert(Coffee::from, Coffee::into))] coffee: Coffee,
 }
 
-impl Packet {
-    #[inline]
-    fn from_bool(value: bool) -> u8 { if value { 1 } else { 0 } }
-
-    #[inline]
-    fn to_bool(value: u8) -> bool { value != 0 }
-}
-
-const DATA: &[u8] = &[0x02];
+const DATA: &[u8] = &[0x01];
 
 let mut packet = Packet::default();
 packet.unpack(DATA);
 
-assert_eq!(packet.flag_1, true);
-assert_eq!(packet.flag_2, false);
+assert_eq!(packet.coffee, Coffee::Latte);
 
 let mut buffer: [u8; 1] = [0; 1];
 let result = packet.pack(&mut buffer);

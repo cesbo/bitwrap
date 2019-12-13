@@ -57,8 +57,8 @@ impl BitWrapMacro {
         };
         let ty = Ident::new(convert_ty, proc_macro2::Span::call_site());
 
-        let mut convert_from: Option<&Ident> = None;
-        let mut convert_to: Option<&Ident> = None;
+        let mut convert_from = TokenStream::new();
+        let mut convert_into = TokenStream::new();
 
         for item in iter {
             match item {
@@ -66,13 +66,13 @@ impl BitWrapMacro {
                     let mut nested = arg.nested.iter();
 
                     if let Some(syn::NestedMeta::Meta(syn::Meta::Path(v))) = nested.next() {
-                        convert_from = v.get_ident();
+                        convert_from.extend(quote! { #v });
                     } else {
                         panic!("bits convert argument #1 should be a function");
                     }
 
                     if let Some(syn::NestedMeta::Meta(syn::Meta::Path(v))) = nested.next() {
-                        convert_to = v.get_ident();
+                        convert_into.extend(quote! { #v });
                     } else {
                         panic!("bits convert argument #2 should be a function");
                     }
@@ -99,15 +99,11 @@ impl BitWrapMacro {
             });
         }
 
-        if let Some(v) = convert_from {
-            self.pack_list.extend(quote! {
-                let value = Self::#v ( self.#field_ident ) as #ty;
-            });
-        } else {
+        if convert_into.is_empty() {
             match field_ty {
                 syn::Type::Path(v) if v.path.is_ident("bool") => {
                     self.pack_list.extend(quote! {
-                        let value = if self.#field_ident { 1 } else { 0 };
+                        let value: #ty = if self.#field_ident { 1 } else { 0 };
                     });
                 }
                 _ => {
@@ -116,6 +112,10 @@ impl BitWrapMacro {
                     });
                 }
             }
+        } else {
+            self.pack_list.extend(quote! {
+                let value: #ty = #convert_into ( self.#field_ident );
+            });
         }
 
         self.unpack_list.extend(quote! {
@@ -168,11 +168,7 @@ impl BitWrapMacro {
             });
         }
 
-        if let Some(v) = convert_to {
-            self.unpack_list.extend(quote! {
-                self.#field_ident = Self::#v ( value ) as #field_ty;
-            });
-        } else {
+        if convert_from.is_empty() {
             match field_ty {
                 syn::Type::Path(v) if v.path.is_ident("bool") => {
                     self.unpack_list.extend(quote! {
@@ -185,6 +181,10 @@ impl BitWrapMacro {
                     });
                 }
             }
+        } else {
+            self.unpack_list.extend(quote! {
+                self.#field_ident = #convert_from ( value );
+            });
         }
     }
 
