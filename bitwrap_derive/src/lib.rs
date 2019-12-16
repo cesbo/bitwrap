@@ -337,13 +337,13 @@ impl BitWrapMacro {
 
         quote! {
             impl bitwrap::BitWrap for #struct_id {
-                fn pack(&self, dst: &mut [u8]) -> Result<usize, BitWrapError> {
+                fn pack(&self, dst: &mut [u8]) -> Result<usize, bitwrap::BitWrapError> {
                     let mut offset: usize = 0;
                     #pack_list
                     Ok(offset)
                 }
 
-                fn unpack(&mut self, src: &[u8]) -> Result<usize, BitWrapError> {
+                fn unpack(&mut self, src: &[u8]) -> Result<usize, bitwrap::BitWrapError> {
                     let mut offset: usize = 0;
                     #unpack_list
                     Ok(offset)
