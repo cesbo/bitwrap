@@ -43,15 +43,15 @@ fn test_bitwrap() {
     // Ethernet Header
     #[derive(Default, Debug, BitWrap)]
     struct Eth {
-        #[bitwrap] dst: HW,
-        #[bitwrap] src: HW,
+        #[bits] dst: HW,
+        #[bits] src: HW,
         #[bits(16)] etype: u16,
     }
 
     // IPv4 Address
     #[derive(Debug, BitWrap)]
     struct IpAddr {
-        #[bitwrap] inner: Ipv4Addr,
+        #[bits] inner: Ipv4Addr,
     }
 
     impl Default for IpAddr {
@@ -77,15 +77,15 @@ fn test_bitwrap() {
         #[bits(8)] ttl: u8,
         #[bits(8)] protocol: u8,
         #[bits(16)] checksum: u16,
-        #[bitwrap] src: IpAddr,
-        #[bitwrap] dst: IpAddr,
+        #[bits] src: IpAddr,
+        #[bits] dst: IpAddr,
     }
 
     // Packet
     #[derive(Default, Debug, BitWrap)]
     struct Packet {
-        #[bitwrap] eth: Eth,
-        #[bitwrap] ipv4: IP4,
+        #[bits] eth: Eth,
+        #[bits] ipv4: IP4,
     }
 
     let mut packet = Packet::default();

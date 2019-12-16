@@ -116,8 +116,8 @@ struct IP4 {
     #[bits(8)] ttl: u8,
     #[bits(8)] protocol: u8,
     #[bits(16)] checksum: u16,
-    #[bitwrap] src: Ipv4Addr,
-    #[bitwrap] dst: Ipv4Addr,
+    #[bits] src: Ipv4Addr,
+    #[bits] dst: Ipv4Addr,
 }
 
 const DATA: &[u8] = &[
