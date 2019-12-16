@@ -22,7 +22,7 @@ For example packet has next format:
 ```rust
 #![no_std]
 
-use bitwrap::*;
+use bitwrap::BitWrap;
 
 #[derive(Default, BitWrap)]
 struct Packet {
@@ -68,7 +68,7 @@ bits_skip attribute accept next arguments:
 - value. optional argument. by the default: 0
 
 ```rust
-use bitwrap::*;
+use bitwrap::BitWrap;
 
 #[derive(Default, BitWrap)]
 struct Packet {
@@ -109,7 +109,7 @@ For example part of IPv4 packet:
 
 ```rust
 use std::net::Ipv4Addr;
-use bitwrap::*;
+use bitwrap::BitWrap;
 
 #[derive(BitWrap)]
 struct IP4 {
@@ -171,6 +171,8 @@ From and Into traits implemented for the field type.
 | Coffee | 4 |
 
 ```rust
+use bitwrap::BitWrap;
+
 #[derive(Debug, PartialEq, Clone, Copy)]
 enum Coffee {
     Water,

@@ -1,6 +1,6 @@
 #![no_std]
 
-use bitwrap::*;
+use bitwrap::BitWrap;
 
 
 #[test]
