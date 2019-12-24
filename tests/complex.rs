@@ -71,7 +71,7 @@ fn test_bitwrap() {
         #[bits(2)] ecn: u8,
         #[bits(16)] total_length: u16,
         #[bits(16)] id: u16,
-        #[bits_skip(1, 0)]
+        #[bits(1, skip = 0)]
         #[bits(2)] flags: u8,
         #[bits(13)] offset: u16,
         #[bits(8)] ttl: u8,

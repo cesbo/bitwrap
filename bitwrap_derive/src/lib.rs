@@ -22,14 +22,29 @@ struct BitWrapMacro {
 }
 
 
-fn extend_token_stream(stream: &mut TokenStream,
-    iter: &mut proc_macro2::token_stream::IntoIter)
-{
+// convert TokenTree literal to usize
+fn literal_to_usize(item: &TokenTree) -> usize {
+    if let TokenTree::Literal(v) = item {
+        syn::LitInt::from(v.clone()).base10_parse::<usize>().unwrap_or(0)
+    } else {
+        0
+    }
+}
+
+
+// skip '=' token after ident in attribute options
+fn skip_assign(iter: &mut proc_macro2::token_stream::IntoIter) {
     match iter.next() {
         Some(TokenTree::Punct(v)) if v.as_char() == '=' => {}
         _ => panic!("unexpected token")
     }
+}
 
+
+// push attribute option tokens to TokenStream
+fn extend_token_stream(stream: &mut TokenStream,
+    iter: &mut proc_macro2::token_stream::IntoIter)
+{
     while let Some(item) = iter.next() {
         match item {
             TokenTree::Punct(v) if v.as_char() == ',' => break,
@@ -41,6 +56,7 @@ fn extend_token_stream(stream: &mut TokenStream,
 }
 
 
+// get type to store bits
 fn get_bits_type(bits: usize) -> Ident {
     let convert_ty = if bits <= 8 {
         "u8"
@@ -140,6 +156,51 @@ impl BitWrapMacro {
         }
     }
 
+    fn macro_make_skip(&mut self, bits: usize, value: usize) {
+        let mut bits = bits;
+
+        while bits > self.bits {
+            let shift = bits - self.bits; // value left shift
+            let mask = 0xFFu8 >> (8 - self.bits);
+            let v = ((value >> shift) as u8) & mask;
+
+            self.pack_list.extend(quote! {
+                dst[offset] |= #v;
+                offset += 1;
+                dst[offset] = 0;
+            });
+
+            self.unpack_list.extend(quote! {
+                offset += 1;
+            });
+
+            bits -= self.bits;
+            self.bits = 8;
+        }
+
+        self.bits -= bits;
+
+        let shift = self.bits; // byte right shift
+        let mask = 0xFFu8 >> (8 - bits);
+        let v = ((value as u8) & mask) << shift;
+
+        self.pack_list.extend(quote! {
+            dst[offset] |= #v;
+        });
+
+        if shift == 0 {
+            self.pack_list.extend(quote! {
+                offset += 1;
+            });
+
+            self.unpack_list.extend(quote! {
+                offset += 1;
+            });
+
+            self.bits = 8;
+        }
+    }
+
     fn build_field_bits(&mut self, field: &syn::Field, tokens: &TokenStream) {
         let field_ty = &field.ty;
         let field_ident = &field.ident;
@@ -169,11 +230,10 @@ impl BitWrapMacro {
         let mut bits = 0;
         let mut convert_from = TokenStream::new();
         let mut convert_into = TokenStream::new();
+        let mut skip_value: Option<usize> = None;
 
         if let Some(item) = iter.next() {
-            if let TokenTree::Literal(v) = item {
-                bits = syn::LitInt::from(v).base10_parse::<usize>().unwrap_or(0);
-            }
+            bits = literal_to_usize(&item);
 
             if bits == 0 || bits > 64 {
                 panic!("bits argument #1 should be a number in range 1 .. 64");
@@ -186,22 +246,34 @@ impl BitWrapMacro {
                 TokenTree::Ident(v) => {
                     match v.to_string().as_str() {
                         "from" => {
+                            skip_assign(&mut iter);
                             extend_token_stream(&mut convert_from, &mut iter);
                             convert_from.extend(quote! {
                                 (value)
                             });
                         }
                         "into" => {
+                            skip_assign(&mut iter);
                             extend_token_stream(&mut convert_into, &mut iter);
                             convert_into.extend(quote! {
                                 ( self.#field_ident )
                             });
+                        }
+                        "skip" => {
+                            skip_assign(&mut iter);
+                            skip_value = Some(literal_to_usize(&iter.next().unwrap()));
                         }
                         v => panic!("bits has unexpected argument: {}", v),
                     }
                 }
                 _ => panic!("bits has wrong format"),
             }
+        }
+
+        if let Some(value) = skip_value {
+            self.macro_make_check(bits);
+            self.macro_make_skip(bits, value);
+            return;
         }
 
         let ty = get_bits_type(bits);
@@ -249,78 +321,10 @@ impl BitWrapMacro {
         });
     }
 
-    fn build_field_bits_skip(&mut self, meta_list: &syn::MetaList) {
-        let mut iter = meta_list.nested.iter();
-
-        let mut bits = match iter.next() {
-            Some(syn::NestedMeta::Lit(syn::Lit::Int(v))) => v.base10_parse::<usize>().unwrap_or(0),
-            _ => 0,
-        };
-
-        if bits == 0 || bits > 64 {
-            panic!("argument #1 should be a number in range 1 .. 64");
-        }
-
-        let value = match iter.next() {
-            Some(syn::NestedMeta::Lit(syn::Lit::Int(v))) => v.base10_parse::<usize>().unwrap(),
-            _ => 0usize,
-        };
-
-        self.macro_make_check(bits);
-
-        while bits > self.bits {
-            let shift = bits - self.bits; // value left shift
-            let mask = 0xFFu8 >> (8 - self.bits);
-            let v = ((value >> shift) as u8) & mask;
-
-            self.pack_list.extend(quote! {
-                dst[offset] |= #v;
-                offset += 1;
-                dst[offset] = 0;
-            });
-
-            self.unpack_list.extend(quote! {
-                offset += 1;
-            });
-
-            bits -= self.bits;
-            self.bits = 8;
-        }
-
-        self.bits -= bits;
-
-        let shift = self.bits; // byte right shift
-        let mask = 0xFFu8 >> (8 - bits);
-        let v = ((value as u8) & mask) << shift;
-
-        self.pack_list.extend(quote! {
-            dst[offset] |= #v;
-        });
-
-        if shift == 0 {
-            self.pack_list.extend(quote! {
-                offset += 1;
-            });
-
-            self.unpack_list.extend(quote! {
-                offset += 1;
-            });
-
-            self.bits = 8;
-        }
-    }
-
     fn build_field(&mut self, field: &syn::Field) {
         for attr in field.attrs.iter().filter(|v| v.path.segments.len() == 1) {
             match attr.path.segments[0].ident.to_string().as_str() {
                 "bits" => self.build_field_bits(field, &attr.tokens),
-                "bits_skip" => {
-                    let meta = attr.parse_meta().unwrap();
-                    match &meta {
-                        syn::Meta::List(v) => self.build_field_bits_skip(v),
-                        _ => panic!("bits_skip format mismatch"),
-                    }
-                }
                 _ => {}
             };
         }
@@ -364,7 +368,7 @@ impl BitWrapMacro {
 }
 
 
-#[proc_macro_derive(BitWrap, attributes(bits, bits_skip))]
+#[proc_macro_derive(BitWrap, attributes(bits))]
 pub fn bitwrap_derive(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     let input = parse_macro_input!(input as syn::DeriveInput);
 
