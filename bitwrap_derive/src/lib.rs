@@ -1,6 +1,7 @@
 extern crate proc_macro;
 
 use proc_macro2::{
+    TokenTree,
     TokenStream,
     Ident,
 };
@@ -21,6 +22,40 @@ struct BitWrapMacro {
 }
 
 
+fn extend_token_stream(stream: &mut TokenStream,
+    iter: &mut proc_macro2::token_stream::IntoIter)
+{
+    match iter.next() {
+        Some(TokenTree::Punct(v)) if v.as_char() == '=' => {}
+        _ => panic!("unexpected token")
+    }
+
+    while let Some(item) = iter.next() {
+        match item {
+            TokenTree::Punct(v) if v.as_char() == ',' => break,
+            TokenTree::Ident(v) => stream.extend(quote! { #v }),
+            TokenTree::Punct(v) => stream.extend(quote! { #v }),
+            _ => panic!("unexpected token"),
+        }
+    }
+}
+
+
+fn get_bits_type(bits: usize) -> Ident {
+    let convert_ty = if bits <= 8 {
+        "u8"
+    } else if bits <= 16 {
+        "u16"
+    } else if bits <= 32 {
+        "u32"
+    } else {
+        "u64"
+    };
+
+    Ident::new(convert_ty, proc_macro2::Span::call_site())
+}
+
+
 impl BitWrapMacro {
     fn new(ident: &Ident) -> Self {
         Self {
@@ -29,33 +64,6 @@ impl BitWrapMacro {
             unpack_list: TokenStream::default(),
             bits: 0,
         }
-    }
-
-    fn get_bits(iter: &mut syn::punctuated::Iter<'_, syn::NestedMeta>) -> usize {
-        let bits = match iter.next() {
-            Some(syn::NestedMeta::Lit(syn::Lit::Int(v))) => v.base10_parse::<usize>().unwrap(),
-            _ => 0,
-        };
-
-        if bits == 0 || bits > 64 {
-            panic!("argument #1 should be a number in range 1 .. 64");
-        }
-
-        bits
-    }
-
-    fn get_type(bits: usize) -> Ident {
-        let convert_ty = if bits <= 8 {
-            "u8"
-        } else if bits <= 16 {
-            "u16"
-        } else if bits <= 32 {
-            "u32"
-        } else {
-            "u64"
-        };
-
-        Ident::new(convert_ty, proc_macro2::Span::call_site())
     }
 
     fn macro_make_check(&mut self, bits: usize) {
@@ -132,96 +140,128 @@ impl BitWrapMacro {
         }
     }
 
-    fn build_field_bits(&mut self, field: &syn::Field, meta_list: &syn::MetaList) {
-        let mut iter = meta_list.nested.iter();
-
+    fn build_field_bits(&mut self, field: &syn::Field, tokens: &TokenStream) {
         let field_ty = &field.ty;
         let field_ident = &field.ident;
 
-        let bits = Self::get_bits(&mut iter);
-        let ty = Self::get_type(bits);
+        if tokens.is_empty() {
+            assert_eq!(self.bits, 8, "bitwrap not aligned");
 
-        self.macro_make_check(bits);
+            self.pack_list.extend(quote! {
+                offset += self.#field_ident.pack(&mut dst[offset ..])?;
+            });
 
-        match field_ty {
-            syn::Type::Path(v) if v.path.is_ident("bool") => {
-                self.pack_list.extend(quote! {
-                    let value: #ty = if self.#field_ident { 1 } else { 0 };
-                });
-            }
-            _ => {
-                self.pack_list.extend(quote! {
-                    let value = self.#field_ident as #ty;
-                });
-            }
+            self.unpack_list.extend(quote! {
+                offset += self.#field_ident.unpack(&src[offset ..])?;
+            });
+
+            return;
         }
 
-        self.macro_make_bits(&ty, bits);
+        let tokens = tokens.clone();
+        let tree = tokens.into_iter().next().unwrap();
+        let group = match tree {
+            TokenTree::Group(v) => v.stream(),
+            _ => unreachable!(),
+        };
+        let mut iter = group.into_iter();
 
-        match field_ty {
-            syn::Type::Path(v) if v.path.is_ident("bool") => {
-                self.unpack_list.extend(quote! {
-                    self.#field_ident = value != 0;
-                });
-            }
-            _ => {
-                self.unpack_list.extend(quote! {
-                    self.#field_ident = value as #field_ty;
-                });
-            }
-        }
-    }
-
-    fn build_field_bits_convert(&mut self, field: &syn::Field, meta_list: &syn::MetaList) {
-        let mut iter = meta_list.nested.iter();
-
-        let field_ty = &field.ty;
-        let field_ident = &field.ident;
-
-        let bits = Self::get_bits(&mut iter);
-        let ty = Self::get_type(bits);
-
+        let mut bits = 0;
         let mut convert_from = TokenStream::new();
         let mut convert_into = TokenStream::new();
 
-        if meta_list.nested.len() == 1 {
-            convert_from.extend(quote! { #field_ty::from });
-            convert_into.extend(quote! { #field_ty::into });
-        } else if meta_list.nested.len() == 3 {
-            match iter.next() {
-                Some(syn::NestedMeta::Meta(syn::Meta::Path(v))) => {
-                    convert_from.extend(quote! { #v });
+        while let Some(item) = iter.next() {
+            if bits == 0 {
+                if let TokenTree::Literal(v) = item {
+                    bits = syn::LitInt::from(v).base10_parse::<usize>().unwrap_or(0);
                 }
-                _ => panic!("bits_convert argument #2 should be a function"),
-            };
 
-            match iter.next() {
-                Some(syn::NestedMeta::Meta(syn::Meta::Path(v))) => {
-                    convert_into.extend(quote! { #v });
+                if bits == 0 || bits > 64 {
+                    panic!("bits argument #1 should be a number in range 1 .. 64");
                 }
-                _ => panic!("bits_convert argument #3 should be a function"),
-            };
-        } else {
-            panic!("bits_convert has wrong arguments format");
+
+                continue;
+            }
+
+            match item {
+                TokenTree::Punct(v) if v.as_char() == ',' => continue,
+                TokenTree::Ident(v) => {
+                    match v.to_string().as_str() {
+                        "from" => {
+                            extend_token_stream(&mut convert_from, &mut iter);
+                            convert_from.extend(quote! {
+                                (value)
+                            });
+                        }
+                        "into" => {
+                            extend_token_stream(&mut convert_into, &mut iter);
+                            convert_into.extend(quote! {
+                                ( self.#field_ident )
+                            });
+                        }
+                        v => panic!("bits has unexpected argument: {}", v),
+                    }
+                }
+                _ => panic!("bits has wrong format"),
+            }
+        }
+
+        let ty = get_bits_type(bits);
+
+        if convert_from.is_empty() {
+            match field_ty {
+                syn::Type::Path(v) if v.path.is_ident("bool") => {
+                    convert_from.extend(quote! {
+                        value != 0
+                    });
+                }
+                _ => {
+                    convert_from.extend(quote! {
+                        value as #field_ty
+                    })
+                }
+            }
+        }
+
+        if convert_into.is_empty() {
+            match field_ty {
+                syn::Type::Path(v) if v.path.is_ident("bool") => {
+                    convert_into.extend(quote! {
+                        if self.#field_ident { 1 } else { 0 }
+                    });
+                }
+                _ => {
+                    convert_into.extend(quote! {
+                        self.#field_ident as #ty
+                    })
+                }
+            }
         }
 
         self.macro_make_check(bits);
 
         self.pack_list.extend(quote! {
-            let value: #ty = #convert_into ( self.#field_ident );
+            let value: #ty = #convert_into ;
         });
 
         self.macro_make_bits(&ty, bits);
 
         self.unpack_list.extend(quote! {
-            self.#field_ident = #convert_from ( value );
+            self.#field_ident = #convert_from ;
         });
     }
 
     fn build_field_bits_skip(&mut self, meta_list: &syn::MetaList) {
         let mut iter = meta_list.nested.iter();
 
-        let mut bits = Self::get_bits(&mut iter);
+        let mut bits = match iter.next() {
+            Some(syn::NestedMeta::Lit(syn::Lit::Int(v))) => v.base10_parse::<usize>().unwrap_or(0),
+            _ => 0,
+        };
+
+        if bits == 0 || bits > 64 {
+            panic!("argument #1 should be a number in range 1 .. 64");
+        }
 
         let value = match iter.next() {
             Some(syn::NestedMeta::Lit(syn::Lit::Int(v))) => v.base10_parse::<usize>().unwrap(),
@@ -272,43 +312,15 @@ impl BitWrapMacro {
         }
     }
 
-    fn build_field_bits_nested(&mut self, field: &syn::Field) {
-        assert_eq!(self.bits, 8, "bitwrap not aligned");
-
-        let ident = &field.ident;
-
-        self.pack_list.extend(quote! {
-            offset += self.#ident.pack(&mut dst[offset ..])?;
-        });
-
-        self.unpack_list.extend(quote! {
-            offset += self.#ident.unpack(&src[offset ..])?;
-        });
-    }
-
     fn build_field(&mut self, field: &syn::Field) {
         for attr in field.attrs.iter().filter(|v| v.path.segments.len() == 1) {
             match attr.path.segments[0].ident.to_string().as_str() {
-                "bits" => {
-                    let meta = attr.parse_meta().unwrap();
-                    match &meta {
-                        syn::Meta::Path(_) => self.build_field_bits_nested(field),
-                        syn::Meta::List(v) => self.build_field_bits(field, v),
-                        _ => panic!("bits format mismatch"),
-                    }
-                }
+                "bits" => self.build_field_bits(field, &attr.tokens),
                 "bits_skip" => {
                     let meta = attr.parse_meta().unwrap();
                     match &meta {
                         syn::Meta::List(v) => self.build_field_bits_skip(v),
                         _ => panic!("bits_skip format mismatch"),
-                    }
-                }
-                "bits_convert" => {
-                    let meta = attr.parse_meta().unwrap();
-                    match &meta {
-                        syn::Meta::List(v) => self.build_field_bits_convert(field, v),
-                        _ => panic!("bits_convert format mismatch"),
                     }
                 }
                 _ => {}
@@ -354,7 +366,7 @@ impl BitWrapMacro {
 }
 
 
-#[proc_macro_derive(BitWrap, attributes(bits, bits_skip, bits_convert))]
+#[proc_macro_derive(BitWrap, attributes(bits, bits_skip))]
 pub fn bitwrap_derive(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     let input = parse_macro_input!(input as syn::DeriveInput);
 

@@ -157,13 +157,11 @@ Field type means a type of the struct field.
 For example `bits(1)` - numerical type will be `u8`.
 If the field type is `bool` then conversion code will be appended automatically.
 
-For other types or for value conversion you may use  - `bits_convert(1, from, into)`:
+For other types or for value conversion you may use:
+`bits(4, from = Coffee::from, into = Coffee::into)`:
 
 - `from` - method to convert field type from numeric type
 - `into` - method to convert numeric type into field type
-
-If conversion methods not defined - `bits_convert(1)` will be used
-From and Into traits implemented for the field type.
 
 | Field | Bits |
 |---|---|
@@ -214,7 +212,8 @@ impl Into<u8> for Coffee {
 #[derive(Default, BitWrap)]
 struct Packet {
     #[bits_skip(4)]
-    #[bits_convert(4)] coffee: Coffee,
+    #[bits(4, from = Coffee::from, into = Coffee::into)]
+    coffee: Coffee,
 }
 
 const DATA: &[u8] = &[0x01];

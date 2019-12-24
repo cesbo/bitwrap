@@ -46,7 +46,8 @@ fn test_readme_convert() {
     #[derive(Default, BitWrap)]
     struct Packet {
         #[bits_skip(4)]
-        #[bits_convert(4)] coffee: Coffee,
+        #[bits(4, from = Coffee::from, into = Coffee::into)]
+        coffee: Coffee,
     }
 
     const DATA: &[u8] = &[0x01];
