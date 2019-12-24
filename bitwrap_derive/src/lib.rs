@@ -170,19 +170,17 @@ impl BitWrapMacro {
         let mut convert_from = TokenStream::new();
         let mut convert_into = TokenStream::new();
 
-        while let Some(item) = iter.next() {
-            if bits == 0 {
-                if let TokenTree::Literal(v) = item {
-                    bits = syn::LitInt::from(v).base10_parse::<usize>().unwrap_or(0);
-                }
-
-                if bits == 0 || bits > 64 {
-                    panic!("bits argument #1 should be a number in range 1 .. 64");
-                }
-
-                continue;
+        if let Some(item) = iter.next() {
+            if let TokenTree::Literal(v) = item {
+                bits = syn::LitInt::from(v).base10_parse::<usize>().unwrap_or(0);
             }
 
+            if bits == 0 || bits > 64 {
+                panic!("bits argument #1 should be a number in range 1 .. 64");
+            }
+        }
+
+        while let Some(item) = iter.next() {
             match item {
                 TokenTree::Punct(v) if v.as_char() == ',' => continue,
                 TokenTree::Ident(v) => {
