@@ -32,15 +32,6 @@ fn literal_to_usize(item: &TokenTree) -> usize {
 }
 
 
-// skip '=' token after ident in attribute options
-fn skip_assign(iter: &mut proc_macro2::token_stream::IntoIter) {
-    match iter.next() {
-        Some(TokenTree::Punct(v)) if v.as_char() == '=' => {}
-        _ => panic!("unexpected token")
-    }
-}
-
-
 // push attribute option tokens to TokenStream
 fn extend_token_stream(stream: &mut TokenStream,
     iter: &mut proc_macro2::token_stream::IntoIter)
@@ -53,22 +44,6 @@ fn extend_token_stream(stream: &mut TokenStream,
             _ => panic!("unexpected token"),
         }
     }
-}
-
-
-// get type to store bits
-fn get_bits_type(bits: usize) -> Ident {
-    let convert_ty = if bits <= 8 {
-        "u8"
-    } else if bits <= 16 {
-        "u16"
-    } else if bits <= 32 {
-        "u32"
-    } else {
-        "u64"
-    };
-
-    Ident::new(convert_ty, proc_macro2::Span::call_site())
 }
 
 
@@ -205,6 +180,7 @@ impl BitWrapMacro {
         let field_ty = &field.ty;
         let field_ident = &field.ident;
 
+        // nested field
         if tokens.is_empty() {
             assert_eq!(self.bits, 8, "bitwrap not aligned");
 
@@ -232,6 +208,7 @@ impl BitWrapMacro {
         let mut convert_into = TokenStream::new();
         let mut skip_value: Option<usize> = None;
 
+        // get bits
         if let Some(item) = iter.next() {
             bits = literal_to_usize(&item);
 
@@ -240,28 +217,34 @@ impl BitWrapMacro {
             }
         }
 
+        // parse attributes
         while let Some(item) = iter.next() {
             match item {
                 TokenTree::Punct(v) if v.as_char() == ',' => continue,
                 TokenTree::Ident(v) => {
+                    // skip '=' token after ident in attribute options
+                    match iter.next() {
+                        Some(TokenTree::Punct(v)) if v.as_char() == '=' => {}
+                        _ => panic!("unexpected token")
+                    }
+
                     match v.to_string().as_str() {
                         "from" => {
-                            skip_assign(&mut iter);
                             extend_token_stream(&mut convert_from, &mut iter);
                             convert_from.extend(quote! {
                                 (value)
                             });
                         }
                         "into" => {
-                            skip_assign(&mut iter);
                             extend_token_stream(&mut convert_into, &mut iter);
                             convert_into.extend(quote! {
                                 ( self.#field_ident )
                             });
                         }
                         "skip" => {
-                            skip_assign(&mut iter);
-                            skip_value = Some(literal_to_usize(&iter.next().unwrap()));
+                            if let Some(value) = iter.next() {
+                                skip_value = Some(literal_to_usize(&value));
+                            }
                         }
                         v => panic!("bits has unexpected argument: {}", v),
                     }
@@ -270,14 +253,26 @@ impl BitWrapMacro {
             }
         }
 
+        // skip bits
         if let Some(value) = skip_value {
             self.macro_make_check(bits);
             self.macro_make_skip(bits, value);
             return;
         }
 
-        let ty = get_bits_type(bits);
+        // get type to store bits
+        let convert_ty = if bits <= 8 {
+            "u8"
+        } else if bits <= 16 {
+            "u16"
+        } else if bits <= 32 {
+            "u32"
+        } else {
+            "u64"
+        };
+        let ty = Ident::new(convert_ty, proc_macro2::Span::call_site());
 
+        // set default conversion bits -> field
         if convert_from.is_empty() {
             match field_ty {
                 syn::Type::Path(v) if v.path.is_ident("bool") => {
@@ -293,6 +288,7 @@ impl BitWrapMacro {
             }
         }
 
+        // set default conversion field -> bits
         if convert_into.is_empty() {
             match field_ty {
                 syn::Type::Path(v) if v.path.is_ident("bool") => {
