@@ -4,12 +4,34 @@
 
 ## Intro
 
-bitwrap is a derive macro and trait to declare a struct data member
+BitWrap is a derive macro and trait to declare a struct data member
 with explicit size, in bits.
 
-## Bitfield
+## BitWrap Trait
 
-`bits` attribute accept only one argument - field size in bits.
+BitWrap trait declares 2 methods:
+
+```rust,ignore
+fn pack(&self, dst: &mut [u8]) -> Result<usize, BitWrapError>
+```
+
+`pack` method puts value into dst array
+
+```rust,ignore
+fn unpack(&mut self, src: &[u8]) -> Result<usize, BitWrapError>
+```
+
+`unpack` method extracts value from src array
+
+## BitWrap Macro
+
+BitWrap Macro implements BitWrap trait for object.
+`pack` and `unpack` code generates automatically according to the fields arguments.
+
+Option format - `bits(N)` where:
+
+- `N` - field size in bits
+
 For example packet has next format:
 
 | Field | Bits |
@@ -26,10 +48,17 @@ use bitwrap::BitWrap;
 
 #[derive(Default, BitWrap)]
 struct Packet {
-    #[bits(1)] flag_1: u8,
-    #[bits(1)] flag_2: u8,
-    #[bits(2)] data_3: u8,
-    #[bits(12)] data_4: u16,
+    #[bits(1)]
+    flag_1: u8,
+
+    #[bits(1)]
+    flag_2: u8,
+
+    #[bits(2)]
+    data_3: u8,
+
+    #[bits(12)]
+    data_4: u16,
 }
 
 const DATA: &[u8] = &[0xA2, 0x34];
@@ -51,31 +80,35 @@ assert_eq!(buffer, DATA);
 
 ## Skip bits
 
-Some packets contains reserved or fixed bits.
-This bits could be skiped with `bits_skip` attribute.
+Some packets contains reserved or fixed bits. This field could be skiped
+with `skip` option.
+
+Option format - `bits(N, skip = V)` where:
+
+- `N` - field size in bits
+- `V` - value to set in field
+
 For example packet has next format:
 
 | Field | Bits |
 |---|---|
 | Data | 6 |
-| 0b00 | 2 |
-| 0b1111 | 4 |
+| Reserved 0b00 | 2 |
+| Reserved 0b1111 | 4 |
 | Data | 4 |
-
-bits_skip attribute accept next arguments:
-
-- size in bits
-- value. optional argument. by the default: 0
 
 ```rust
 use bitwrap::BitWrap;
 
 #[derive(Default, BitWrap)]
 struct Packet {
-    #[bits(6)] f1: u8,
-    #[bits_skip(2)]
-    #[bits_skip(4, 0b1111)]
-    #[bits(4)] f2: u8,
+    #[bits(6)]
+    f1: u8,
+
+    #[bits(2, skip = 0)]
+    #[bits(4, skip = 0b1111)]
+    #[bits(4)]
+    f2: u8,
 }
 
 const DATA: &[u8] = &[0xAC, 0xF5];
@@ -86,8 +119,7 @@ packet.unpack(DATA).unwrap();
 assert_eq!(packet.f1, 0x2B);
 assert_eq!(packet.f2, 0x05);
 
-let mut buffer: Vec<u8> = Vec::new();
-buffer.resize(2, 0);
+let mut buffer: [u8; 2] = [0; 2];
 let result = packet.pack(&mut buffer).unwrap();
 
 assert_eq!(&buffer[.. result], DATA);
@@ -95,7 +127,7 @@ assert_eq!(&buffer[.. result], DATA);
 
 ## Nested objects
 
-Nested field is an object with BitWrap interface.
+Nested field is an object with implemented BitWrap trait.
 
 For example part of IPv4 packet:
 
@@ -113,11 +145,20 @@ use bitwrap::BitWrap;
 
 #[derive(BitWrap)]
 struct IP4 {
-    #[bits(8)] ttl: u8,
-    #[bits(8)] protocol: u8,
-    #[bits(16)] checksum: u16,
-    #[bits] src: Ipv4Addr,
-    #[bits] dst: Ipv4Addr,
+    #[bits(8)]
+    ttl: u8,
+
+    #[bits(8)]
+    protocol: u8,
+
+    #[bits(16)]
+    checksum: u16,
+
+    #[bits]
+    src: Ipv4Addr,
+
+    #[bits]
+    dst: Ipv4Addr,
 }
 
 const DATA: &[u8] = &[
@@ -135,14 +176,10 @@ let mut packet = IP4 {
 
 packet.unpack(DATA).unwrap();
 
-assert_eq!(packet.ttl, 64);
-assert_eq!(packet.protocol, 136);
-assert_eq!(packet.checksum, 0x375D);
 assert_eq!(packet.src, Ipv4Addr::new(192, 168, 200, 176));
 assert_eq!(packet.dst, Ipv4Addr::new(192, 168, 200, 183));
 
-let mut buffer: Vec<u8> = Vec::new();
-buffer.resize(32, 0);
+let mut buffer: [u8; 16] = [0; 16];
 let result = packet.pack(&mut buffer).unwrap();
 
 assert_eq!(&buffer[.. result], DATA);
@@ -154,18 +191,18 @@ This feature converts numerical type into the field type.
 Here is numerical type means an unsigned number that enough to contain all data.
 Field type means a type of the struct field.
 
-For example `bits(1)` - numerical type will be `u8`.
+For example `bits(1)` - the numerical type will be `u8`.
 If the field type is `bool` then conversion code will be appended automatically.
 
-For other types or for value conversion you may use:
-`bits(4, from = Coffee::from, into = Coffee::into)`:
+For other types has next options - `bits(N, from = F, into = I)` where:
 
-- `from` - method to convert field type from numeric type
-- `into` - method to convert numeric type into field type
+- `N` - field size in bits
+- `F` - method to convert field type from numeric type
+- `I` - method to convert numeric type into field type
 
 | Field | Bits |
 |---|---|
-| Reserved | 4 |
+| Reserved 0b0000 | 4 |
 | Coffee | 4 |
 
 ```rust
@@ -211,7 +248,7 @@ impl Into<u8> for Coffee {
 
 #[derive(Default, BitWrap)]
 struct Packet {
-    #[bits_skip(4)]
+    #[bits(4, skip = 0)]
     #[bits(4, from = Coffee::from, into = Coffee::into)]
     coffee: Coffee,
 }
