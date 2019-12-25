@@ -9,6 +9,9 @@
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
+#![cfg_attr(feature = "nightly", allow(incomplete_features))]
+#![cfg_attr(feature = "nightly", feature(const_generics))]
+
 use core::fmt;
 
 pub use bitwrap_derive::*;
@@ -83,6 +86,32 @@ impl BitWrap for std::net::Ipv6Addr {
             Ok(16)
         } else {
             Err(BitWrapError)
+        }
+    }
+}
+
+
+#[cfg(feature = "nightly")]
+impl<const N: usize> BitWrap for [u8; N] {
+    #[inline]
+    fn pack(&self, dst: &mut [u8]) -> Result<usize, BitWrapError> {
+        let len = self.len();
+        if len > dst.len() {
+            Err(BitWrapError)
+        } else {
+            (&mut dst[.. len]).clone_from_slice(self);
+            Ok(len)
+        }
+    }
+
+    #[inline]
+    fn unpack(&mut self, src: &[u8]) -> Result<usize, BitWrapError> {
+        let len = self.len();
+        if len > src.len() {
+            Err(BitWrapError)
+        } else {
+            self.clone_from_slice(&src[.. len]);
+            Ok(len)
         }
     }
 }
