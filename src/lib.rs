@@ -48,7 +48,7 @@ impl BitWrap for std::net::Ipv4Addr {
     #[inline]
     fn pack(&self, dst: &mut [u8]) -> Result<usize, BitWrapError> {
         if dst.len() >= 4 {
-            (&mut dst[.. 4]).clone_from_slice(&self.octets());
+            dst[.. 4].clone_from_slice(&self.octets());
             Ok(4)
         } else {
             Err(BitWrapError)
@@ -72,7 +72,7 @@ impl BitWrap for std::net::Ipv6Addr {
     #[inline]
     fn pack(&self, dst: &mut [u8]) -> Result<usize, BitWrapError> {
         if dst.len() >= 16 {
-            (&mut dst[.. 16]).clone_from_slice(&self.octets());
+            dst[.. 16].clone_from_slice(&self.octets());
             Ok(16)
         } else {
             Err(BitWrapError)
@@ -91,27 +91,72 @@ impl BitWrap for std::net::Ipv6Addr {
 }
 
 
+#[cfg(feature = "std")]
+impl BitWrap for Vec<u8> {
+    #[inline]
+    fn pack(&self, dst: &mut [u8]) -> Result<usize, BitWrapError> {
+        let len = self.len();
+        if dst.len() >= len {
+            dst[.. len].clone_from_slice(self.as_slice());
+            Ok(len)
+        } else {
+            Err(BitWrapError)
+        }
+    }
+
+    #[inline]
+    fn unpack(&mut self, src: &[u8]) -> Result<usize, BitWrapError> {
+        self.extend_from_slice(src);
+        Ok(src.len())
+    }
+}
+
+
+#[cfg(feature = "std")]
+impl<T: BitWrap + Default> BitWrap for Vec<T> {
+    #[inline]
+    fn pack(&self, dst: &mut [u8]) -> Result<usize, BitWrapError> {
+        let mut skip = 0;
+        for item in self {
+            skip += item.pack(&mut dst[skip ..])?;
+        }
+        Ok(skip)
+    }
+
+    #[inline]
+    fn unpack(&mut self, src: &[u8]) -> Result<usize, BitWrapError> {
+        let mut skip = 0;
+        while skip < src.len() {
+            let mut item = T::default();
+            skip += item.unpack(&src[skip ..])?;
+            self.push(item);
+        }
+        Ok(skip)
+    }
+}
+
+
 #[cfg(feature = "nightly")]
 impl<const N: usize> BitWrap for [u8; N] {
     #[inline]
     fn pack(&self, dst: &mut [u8]) -> Result<usize, BitWrapError> {
         let len = self.len();
-        if len > dst.len() {
-            Err(BitWrapError)
-        } else {
-            (&mut dst[.. len]).clone_from_slice(self);
+        if dst.len() >= len {
+            dst[.. len].clone_from_slice(self);
             Ok(len)
+        } else {
+            Err(BitWrapError)
         }
     }
 
     #[inline]
     fn unpack(&mut self, src: &[u8]) -> Result<usize, BitWrapError> {
         let len = self.len();
-        if len > src.len() {
-            Err(BitWrapError)
-        } else {
+        if src.len() >= len {
             self.clone_from_slice(&src[.. len]);
             Ok(len)
+        } else {
+            Err(BitWrapError)
         }
     }
 }
