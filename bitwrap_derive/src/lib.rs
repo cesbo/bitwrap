@@ -176,24 +176,32 @@ impl BitWrapMacro {
         }
     }
 
-    fn build_bits_nested(&mut self, field: &syn::Field) {
-        let field_ident = &field.ident;
-
-        assert_eq!(self.bits, 8, "bitwrap not aligned");
-
-        self.pack_list.extend(quote! {
-            offset += self.#field_ident.pack(&mut dst[offset ..])?;
-        });
-
-        self.unpack_list.extend(quote! {
-            offset += self.#field_ident.unpack(&src[offset ..])?;
-        });
-    }
-
-    fn build_bits_base(&mut self, field: &syn::Field, iter: &mut IntoIter) {
+    fn build_bits_check(&mut self, field: &syn::Field, tokens: &TokenStream) {
         let field_ty = &field.ty;
         let field_ident = &field.ident;
 
+        if tokens.is_empty() {
+            assert_eq!(self.bits, 8, "bitwrap not aligned");
+
+            self.pack_list.extend(quote! {
+                offset += self.#field_ident.pack(&mut dst[offset ..])?;
+            });
+
+            self.unpack_list.extend(quote! {
+                offset += self.#field_ident.unpack(&src[offset ..])?;
+            });
+
+            return;
+        }
+
+        let tokens = tokens.clone();
+        let tree = tokens.into_iter().next().unwrap();
+        let group = match tree {
+            TokenTree::Group(v) => v.stream(),
+            _ => unreachable!(),
+        };
+
+        let mut iter = group.into_iter();
         let mut bits = 0;
         let mut convert_from = TokenStream::new();
         let mut convert_into = TokenStream::new();
@@ -221,13 +229,13 @@ impl BitWrapMacro {
 
                     match v.to_string().as_str() {
                         "from" => {
-                            extend_token_stream(&mut convert_from, iter);
+                            extend_token_stream(&mut convert_from, &mut iter);
                             convert_from.extend(quote! {
                                 (value)
                             });
                         }
                         "into" => {
-                            extend_token_stream(&mut convert_into, iter);
+                            extend_token_stream(&mut convert_into, &mut iter);
                             convert_into.extend(quote! {
                                 ( self.#field_ident )
                             });
@@ -306,23 +314,6 @@ impl BitWrapMacro {
         self.unpack_list.extend(quote! {
             self.#field_ident = #convert_from ;
         });
-    }
-
-    fn build_bits_check(&mut self, field: &syn::Field, tokens: &TokenStream) {
-        if tokens.is_empty() {
-            self.build_bits_nested(field);
-            return;
-        }
-
-        let tokens = tokens.clone();
-        let tree = tokens.into_iter().next().unwrap();
-        let group = match tree {
-            TokenTree::Group(v) => v.stream(),
-            _ => unreachable!(),
-        };
-
-        let mut iter = group.into_iter();
-        self.build_bits_base(field, &mut iter);
     }
 
     fn build_field(&mut self, field: &syn::Field) {
