@@ -4,6 +4,7 @@ use proc_macro2::{
     TokenTree,
     TokenStream,
     Ident,
+    token_stream::IntoIter,
 };
 
 use quote::quote;
@@ -33,8 +34,7 @@ fn literal_to_usize(item: &TokenTree) -> usize {
 
 
 // push attribute option tokens to TokenStream
-fn extend_token_stream(stream: &mut TokenStream,
-    iter: &mut proc_macro2::token_stream::IntoIter)
+fn extend_token_stream(stream: &mut TokenStream, iter: &mut IntoIter)
 {
     while let Some(item) = iter.next() {
         match item {
@@ -176,32 +176,23 @@ impl BitWrapMacro {
         }
     }
 
-    fn build_field_bits(&mut self, field: &syn::Field, tokens: &TokenStream) {
-        let field_ty = &field.ty;
+    fn build_bits_nested(&mut self, field: &syn::Field) {
         let field_ident = &field.ident;
 
-        // nested field
-        if tokens.is_empty() {
-            assert_eq!(self.bits, 8, "bitwrap not aligned");
+        assert_eq!(self.bits, 8, "bitwrap not aligned");
 
-            self.pack_list.extend(quote! {
-                offset += self.#field_ident.pack(&mut dst[offset ..])?;
-            });
+        self.pack_list.extend(quote! {
+            offset += self.#field_ident.pack(&mut dst[offset ..])?;
+        });
 
-            self.unpack_list.extend(quote! {
-                offset += self.#field_ident.unpack(&src[offset ..])?;
-            });
+        self.unpack_list.extend(quote! {
+            offset += self.#field_ident.unpack(&src[offset ..])?;
+        });
+    }
 
-            return;
-        }
-
-        let tokens = tokens.clone();
-        let tree = tokens.into_iter().next().unwrap();
-        let group = match tree {
-            TokenTree::Group(v) => v.stream(),
-            _ => unreachable!(),
-        };
-        let mut iter = group.into_iter();
+    fn build_bits_base(&mut self, field: &syn::Field, iter: &mut IntoIter) {
+        let field_ty = &field.ty;
+        let field_ident = &field.ident;
 
         let mut bits = 0;
         let mut convert_from = TokenStream::new();
@@ -230,13 +221,13 @@ impl BitWrapMacro {
 
                     match v.to_string().as_str() {
                         "from" => {
-                            extend_token_stream(&mut convert_from, &mut iter);
+                            extend_token_stream(&mut convert_from, iter);
                             convert_from.extend(quote! {
                                 (value)
                             });
                         }
                         "into" => {
-                            extend_token_stream(&mut convert_into, &mut iter);
+                            extend_token_stream(&mut convert_into, iter);
                             convert_into.extend(quote! {
                                 ( self.#field_ident )
                             });
@@ -317,10 +308,27 @@ impl BitWrapMacro {
         });
     }
 
+    fn build_bits_check(&mut self, field: &syn::Field, tokens: &TokenStream) {
+        if tokens.is_empty() {
+            self.build_bits_nested(field);
+            return;
+        }
+
+        let tokens = tokens.clone();
+        let tree = tokens.into_iter().next().unwrap();
+        let group = match tree {
+            TokenTree::Group(v) => v.stream(),
+            _ => unreachable!(),
+        };
+
+        let mut iter = group.into_iter();
+        self.build_bits_base(field, &mut iter);
+    }
+
     fn build_field(&mut self, field: &syn::Field) {
         for attr in field.attrs.iter().filter(|v| v.path.segments.len() == 1) {
             match attr.path.segments[0].ident.to_string().as_str() {
-                "bits" => self.build_field_bits(field, &attr.tokens),
+                "bits" => self.build_bits_check(field, &attr.tokens),
                 _ => {}
             };
         }
