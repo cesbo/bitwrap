@@ -17,7 +17,7 @@ fn pack(&self, dst: &mut [u8]) -> Result<usize, BitWrapError>
 
 `pack` method serialize struct fields into dst array
 
-```rust,ignore
+```rust
 fn unpack(&mut self, src: &[u8]) -> Result<usize, BitWrapError>
 ```
 
