@@ -56,7 +56,7 @@ struct Packet {
     #[bits]
     ip: std::net::Ipv4Addr
 
-    // get value to pack
+    // get value to pack instead of field value
     #[bits(8, value = self.data.len())]
     len: usize,
 
