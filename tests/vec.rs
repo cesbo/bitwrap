@@ -5,11 +5,15 @@ use bitwrap::*;
 fn test_vec() {
     #[derive(Default, Debug, BitWrap)]
     struct Packet {
-        #[bits(8)]
+        #[bits(8, into = self.set_len)]
         len: usize,
 
         #[bytes(self.len)]
         data: Vec<u8>,
+    }
+
+    impl Packet {
+        fn set_len(&self, _value: usize) -> u8 { self.data.len() as u8 }
     }
 
     const DATA: &[u8] = &[0x04, 0xF0, 0x9F, 0xA6, 0x80];

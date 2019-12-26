@@ -41,6 +41,7 @@ fn extend_token_stream(stream: &mut TokenStream, iter: &mut IntoIter)
             TokenTree::Punct(v) if v.as_char() == ',' => break,
             TokenTree::Ident(v) => stream.extend(quote! { #v }),
             TokenTree::Punct(v) => stream.extend(quote! { #v }),
+            TokenTree::Literal(v) => stream.extend(quote! { #v }),
             _ => panic!("unexpected token"),
         }
     }
