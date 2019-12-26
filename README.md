@@ -34,7 +34,9 @@ struct Packet {
     #[bits(1)]
     flag_1: u8,
 
-    // Get/Set bit and convert into bool (0 - false, 1 - true)
+    // Get/Set bit and convert into bool:
+    // - 0 - false
+    // - 1 - true
     #[bits(1)]
     flag_2: bool,
 
@@ -46,7 +48,7 @@ struct Packet {
     // Get 8 bits and convert them to Enum
     // on 'pack()' call 'into(Enum) -> T'
     // on 'unpack()' call 'from(T) -> Enum'
-    // T is a unsigned number depend of the bit field size
+    // T is a unsigned depends of the bit field size
     #[bits(8, from = Enum::from, into = Enum::into)]
     variant: Enum,
 
@@ -58,8 +60,9 @@ struct Packet {
     #[bits(8, into = self.set_len)]
     len: usize,
 
-    // call BitWrap method for Vec<T> with defined buffer length
-    // where T is u8 or with implemented BitWrap + Default traits
+    // call BitWrap method for Vec<T> with defined
+    // buffer length where T is u8 or with implemented
+    // BitWrap + Default traits
     #[bytes(self.len)]
     data: Vec<u8>,
 }
