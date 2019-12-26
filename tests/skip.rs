@@ -16,7 +16,7 @@ fn test_readme_skip() {
     let mut packet = Packet::default();
     let result = packet.unpack(DATA).unwrap();
 
-    assert_eq!(result, DATA.len())
+    assert_eq!(result, DATA.len());
     assert_eq!(packet.f1, 0x2B);
     assert_eq!(packet.f2, 0x05);
 
