@@ -57,6 +57,10 @@ impl BitWrapMacro {
         }
     }
 
+    fn assert_align(&self) {
+        assert_eq!(self.bits, 8, "bitwrap not aligned");
+    }
+
     fn macro_make_check(&mut self, bits: usize) {
         if self.bits == 8 {
             let bytes = (bits + 7) / 8;
@@ -176,12 +180,13 @@ impl BitWrapMacro {
         }
     }
 
-    fn build_bits_check(&mut self, field: &syn::Field, tokens: &TokenStream) {
+    fn build_bits(&mut self, field: &syn::Field, tokens: &TokenStream) {
         let field_ty = &field.ty;
         let field_ident = &field.ident;
 
+        // Nested
         if tokens.is_empty() {
-            assert_eq!(self.bits, 8, "bitwrap not aligned");
+            self.assert_align();
 
             self.pack_list.extend(quote! {
                 offset += self.#field_ident.pack(&mut dst[offset ..])?;
@@ -202,6 +207,7 @@ impl BitWrapMacro {
         };
 
         let mut iter = group.into_iter();
+
         let mut bits = 0;
         let mut convert_from = TokenStream::new();
         let mut convert_into = TokenStream::new();
@@ -316,10 +322,38 @@ impl BitWrapMacro {
         });
     }
 
+    fn build_bytes(&mut self, field: &syn::Field, tokens: &TokenStream) {
+        self.assert_align();
+
+        let field_ident = &field.ident;
+
+        let tokens = tokens.clone();
+        let tree = tokens.into_iter().next().unwrap();
+        let group = match tree {
+            TokenTree::Group(v) => v.stream(),
+            _ => unreachable!(),
+        };
+
+        let mut iter = group.into_iter();
+
+        let mut bytes = TokenStream::new();
+        extend_token_stream(&mut bytes, &mut iter);
+
+        self.pack_list.extend(quote! {
+            offset += self.#field_ident.pack(&mut dst[offset ..])?;
+        });
+
+        self.unpack_list.extend(quote! {
+            let limit = offset + ( #bytes );
+            offset += self.#field_ident.unpack(&src[offset .. limit])?;
+        });
+    }
+
     fn build_field(&mut self, field: &syn::Field) {
         for attr in field.attrs.iter().filter(|v| v.path.segments.len() == 1) {
             match attr.path.segments[0].ident.to_string().as_str() {
-                "bits" => self.build_bits_check(field, &attr.tokens),
+                "bits" => self.build_bits(field, &attr.tokens),
+                "bytes" => self.build_bytes(field, &attr.tokens),
                 _ => {}
             };
         }
@@ -338,7 +372,7 @@ impl BitWrapMacro {
             self.build_field(field);
         }
 
-        assert_eq!(self.bits, 8, "bitwrap not aligned");
+        self.assert_align();
 
         let struct_id = &self.struct_id;
         let pack_list = &self.pack_list;
@@ -363,7 +397,7 @@ impl BitWrapMacro {
 }
 
 
-#[proc_macro_derive(BitWrap, attributes(bits))]
+#[proc_macro_derive(BitWrap, attributes(bits, bytes))]
 pub fn bitwrap_derive(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     let input = parse_macro_input!(input as syn::DeriveInput);
 
