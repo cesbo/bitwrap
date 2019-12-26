@@ -41,7 +41,7 @@ struct Packet {
     flag_2: bool,
 
     // Fixed 6 bits
-    // on 'pack()' set 6 bits to value in the skip option
+    // on 'pack()' set 6 bits with defined value
     // on 'unpack()' skip 6 bits
     #[bits(6, skip = 0b111111)]
 
