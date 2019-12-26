@@ -344,7 +344,7 @@ impl BitWrapMacro {
         });
 
         self.unpack_list.extend(quote! {
-            let limit = offset + ( #bytes );
+            let limit = offset + ( #bytes ) as usize;
             offset += self.#field_ident.unpack(&src[offset .. limit])?;
         });
     }
