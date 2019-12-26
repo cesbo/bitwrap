@@ -11,7 +11,7 @@ with explicit size, in bits.
 
 BitWrap trait declares 2 methods:
 
-```rust,ignore
+```rust
 fn pack(&self, dst: &mut [u8]) -> Result<usize, BitWrapError>
 ```
 
@@ -25,7 +25,7 @@ fn unpack(&mut self, src: &[u8]) -> Result<usize, BitWrapError>
 
 ## BitWrap Macro
 
-```rust,ignore
+```rust
 use bitwrap::BitWrap;
 
 #[derive(BitWrap)]
