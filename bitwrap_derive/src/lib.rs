@@ -39,10 +39,7 @@ fn extend_token_stream(stream: &mut TokenStream, iter: &mut IntoIter)
     while let Some(item) = iter.next() {
         match item {
             TokenTree::Punct(v) if v.as_char() == ',' => break,
-            TokenTree::Ident(v) => stream.extend(quote! { #v }),
-            TokenTree::Punct(v) => stream.extend(quote! { #v }),
-            TokenTree::Literal(v) => stream.extend(quote! { #v }),
-            _ => panic!("unexpected token"),
+            v => stream.extend(quote! { #v }),
         }
     }
 }
@@ -223,6 +220,18 @@ impl BitWrapMacro {
             }
         }
 
+        // get type to store bits
+        let convert_ty = if bits <= 8 {
+            "u8"
+        } else if bits <= 16 {
+            "u16"
+        } else if bits <= 32 {
+            "u32"
+        } else {
+            "u64"
+        };
+        let ty = Ident::new(convert_ty, proc_macro2::Span::call_site());
+
         // parse attributes
         while let Some(item) = iter.next() {
             match item {
@@ -252,6 +261,13 @@ impl BitWrapMacro {
                                 skip_value = Some(literal_to_usize(&value));
                             }
                         }
+                        "value" => {
+                            let mut inner = TokenStream::new();
+                            extend_token_stream(&mut inner, &mut iter);
+                            convert_into.extend(quote! {
+                                ( #inner ) as #ty
+                            });
+                        }
                         v => panic!("bits has unexpected argument: {}", v),
                     }
                 }
@@ -265,18 +281,6 @@ impl BitWrapMacro {
             self.macro_make_skip(bits, value);
             return;
         }
-
-        // get type to store bits
-        let convert_ty = if bits <= 8 {
-            "u8"
-        } else if bits <= 16 {
-            "u16"
-        } else if bits <= 32 {
-            "u32"
-        } else {
-            "u64"
-        };
-        let ty = Ident::new(convert_ty, proc_macro2::Span::call_site());
 
         // set default conversion bits -> field
         if convert_from.is_empty() {

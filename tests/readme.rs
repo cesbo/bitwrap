@@ -34,40 +34,25 @@ fn test_readme() {
 
     #[derive(BitWrap)]
     struct Packet {
-        // Get bit
         #[bits(1)]
         flag_1: u8,
 
-        // Get next bit and convert into bool (0 - false, 1 - true)
         #[bits(1)]
         flag_2: bool,
 
-        // Fixed 6 bits
-        // on pack set skip value
-        // on unpack just ignore them
         #[bits(6, skip = 0b111111)]
 
-        // Get 8 bits and convert them to Enum
-        // Should implemented From<u8> for Enum and Into<u8> for Enum
         #[bits(8, from = Enum::from, into = Enum::into)]
         variant: Enum,
 
-        // call pack/unpack implemented for Ipv4Addr
         #[bits]
         ip: Ipv4Addr,
 
-        // use from to get value from function
-        #[bits(8, into = self.set_len)]
+        #[bits(8, value = self.data.len())]
         len: u8,
 
-        // pack/unpack
         #[bytes(self.len)]
         data: Vec<u8>,
-    }
-
-    impl Packet {
-        #[inline]
-        fn set_len(&self, _value: u8) -> u8 { self.data.len() as u8 }
     }
 
     impl Default for Packet {

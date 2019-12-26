@@ -56,8 +56,8 @@ struct Packet {
     #[bits]
     ip: std::net::Ipv4Addr
 
-    // set_len returns self.data.len()
-    #[bits(8, into = self.set_len)]
+    // get value to pack
+    #[bits(8, value = self.data.len())]
     len: usize,
 
     // call BitWrap method for Vec<T> with defined
