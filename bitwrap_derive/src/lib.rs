@@ -369,6 +369,18 @@ impl BitWrapMacro {
 
         let field_ident = &field.ident;
 
+        if tokens.is_empty() {
+            self.pack_list.extend(quote! {
+                offset += self.#field_ident.pack(&mut dst[offset ..])?;
+            });
+
+            self.unpack_list.extend(quote! {
+                offset += self.#field_ident.unpack(&src[offset ..])?;
+            });
+
+            return;
+        }
+
         let tokens = tokens.clone();
         let tree = tokens.into_iter().next().unwrap();
         let group = match tree {
