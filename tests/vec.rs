@@ -5,10 +5,8 @@ use bitwrap::*;
 fn test_vec() {
     #[derive(Default, Debug, BitWrap)]
     struct Packet {
-        #[bits(8, value = self.data.len())]
-        len: usize,
-
-        #[bytes(self.len)]
+        #[bits(8, name = data_len, value = self.data.len())]
+        #[bytes(data_len)]
         data: Vec<u8>,
     }
 
@@ -18,7 +16,6 @@ fn test_vec() {
     let result = packet.unpack(DATA).unwrap();
 
     assert_eq!(result, DATA.len());
-    assert_eq!(packet.len, 4);
     assert_eq!(packet.data.as_slice(), &DATA[1 ..]);
 
     let mut buffer: [u8; 5] = [0; 5];

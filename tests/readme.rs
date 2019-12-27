@@ -48,10 +48,8 @@ fn test_readme() {
         #[bits]
         ip: Ipv4Addr,
 
-        #[bits(8, value = self.data.len())]
-        len: u8,
-
-        #[bytes(self.len)]
+        #[bits(8, name = data_len, value = self.data.len())]
+        #[bytes(data_len)]
         data: Vec<u8>,
     }
 
@@ -62,7 +60,6 @@ fn test_readme() {
                 flag_2: false,
                 variant: Enum::default(),
                 ip: std::net::Ipv4Addr::new(0, 0, 0, 0),
-                len: 0,
                 data: Vec::default(),
             }
         }
@@ -81,7 +78,6 @@ fn test_readme() {
     assert_eq!(packet.flag_2, true);
     assert_eq!(packet.variant, Enum::V2);
     assert_eq!(packet.ip, Ipv4Addr::new(192, 168, 200, 176));
-    assert_eq!(packet.len, 4);
     assert_eq!(packet.data.as_slice(), "🦀".as_bytes());
 
     let mut buffer: [u8; 11] = [0; 11];

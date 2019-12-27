@@ -56,14 +56,13 @@ struct Packet {
     #[bits]
     ip: std::net::Ipv4Addr
 
-    // get value to pack instead of field value
-    #[bits(8, value = self.data.len())]
-    len: usize,
+    // virtual field for the bytes option
+    #[bits(8, name = data_len, value = self.data.len())]
 
     // call BitWrap method for Vec<T> with defined
     // buffer length where T is u8 or with implemented
     // BitWrap + Default traits
-    #[bytes(self.len)]
+    #[bytes(data_len)]
     data: Vec<u8>,
 }
 ```

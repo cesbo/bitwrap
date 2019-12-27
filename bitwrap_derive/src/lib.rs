@@ -207,8 +207,15 @@ impl BitWrapMacro {
         let mut iter = group.into_iter();
 
         let mut bits = 0;
+
+        let mut field_name = TokenStream::new();
+        field_name.extend(quote! {
+            self.#field_ident
+        });
+
         let mut convert_from = TokenStream::new();
         let mut convert_into = TokenStream::new();
+
         let mut skip_value: Option<usize> = None;
 
         // get bits
@@ -245,29 +252,59 @@ impl BitWrapMacro {
 
                     match v.to_string().as_str() {
                         "from" => {
+                            if ! convert_from.is_empty() {
+                                panic!("option 'from' not allowed with option 'name'");
+                            }
+
                             extend_token_stream(&mut convert_from, &mut iter);
                             convert_from.extend(quote! {
                                 (value)
                             });
                         }
                         "into" => {
+                            if ! convert_into.is_empty() {
+                                panic!("option 'into' not allowed with option 'value'");
+                            }
+
                             extend_token_stream(&mut convert_into, &mut iter);
                             convert_into.extend(quote! {
-                                ( self.#field_ident )
+                                ( #field_name )
                             });
                         }
+
                         "skip" => {
                             if let Some(value) = iter.next() {
                                 skip_value = Some(literal_to_usize(&value));
                             }
                         }
-                        "value" => {
-                            let mut inner = TokenStream::new();
-                            extend_token_stream(&mut inner, &mut iter);
-                            convert_into.extend(quote! {
-                                ( #inner ) as #ty
+
+                        "name" => {
+                            if ! convert_from.is_empty() {
+                                panic!("option 'name' not allowed with option 'from'");
+                            }
+
+                            let mut value_name = TokenStream::new();
+                            extend_token_stream(&mut value_name, &mut iter);
+                            field_name = TokenStream::new();
+                            field_name.extend(quote! {
+                                let #value_name
+                            });
+                            convert_from.extend(quote! {
+                                value
                             });
                         }
+                        "value" => {
+                            if ! convert_into.is_empty() {
+                                panic!("option 'value' not allowed with option 'into'");
+                            }
+
+                            let mut value_data = TokenStream::new();
+                            extend_token_stream(&mut value_data, &mut iter);
+                            convert_into.extend(quote! {
+                                ( #value_data ) as #ty
+                            })
+                        }
+
                         v => panic!("bits has unexpected argument: {}", v),
                     }
                 }
@@ -303,12 +340,12 @@ impl BitWrapMacro {
             match field_ty {
                 syn::Type::Path(v) if v.path.is_ident("bool") => {
                     convert_into.extend(quote! {
-                        if self.#field_ident { 1 } else { 0 }
+                        if #field_name { 1 } else { 0 }
                     });
                 }
                 _ => {
                     convert_into.extend(quote! {
-                        self.#field_ident as #ty
+                        #field_name as #ty
                     })
                 }
             }
@@ -323,7 +360,7 @@ impl BitWrapMacro {
         self.macro_make_bits(&ty, bits);
 
         self.unpack_list.extend(quote! {
-            self.#field_ident = #convert_from ;
+            #field_name = #convert_from ;
         });
     }
 
