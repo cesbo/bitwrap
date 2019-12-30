@@ -14,6 +14,7 @@ use core::fmt;
 pub use bitwrap_derive::*;
 
 
+#[derive(PartialEq)]
 pub struct BitWrapError;
 
 
