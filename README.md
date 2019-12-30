@@ -56,6 +56,10 @@ struct Packet {
     #[bits]
     ip: std::net::Ipv4Addr
 
+    // byte array
+    #[bytes]
+    mac: [u8; 6],
+
     // virtual field for the bytes option
     #[bits(8, name = data_len, value = self.data.len())]
 

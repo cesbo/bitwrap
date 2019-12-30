@@ -48,6 +48,9 @@ fn test_readme() {
         #[bits]
         ip: Ipv4Addr,
 
+        #[bytes]
+        mac: [u8; 6],
+
         #[bits(8, name = data_len, value = self.data.len())]
         #[bytes(data_len)]
         data: Vec<u8>,
@@ -60,14 +63,19 @@ fn test_readme() {
                 flag_2: false,
                 variant: Enum::default(),
                 ip: std::net::Ipv4Addr::new(0, 0, 0, 0),
+                mac: [0; 6],
                 data: Vec::default(),
             }
         }
     }
 
     const DATA: &[u8] = &[
-        0xFF, 0xAA, 0xC0, 0xA8, 0xC8, 0xB0, 0x04, 0xF0,
-        0x9F, 0xA6, 0x80,
+        0xFF,
+        0xAA,
+        0xC0, 0xA8, 0xC8, 0xB0,
+        0x11, 0x22, 0x33, 0x44, 0x55, 0x66,
+        0x04,
+        0xF0, 0x9F, 0xA6, 0x80,
     ];
 
     let mut packet = Packet::default();
@@ -78,9 +86,10 @@ fn test_readme() {
     assert_eq!(packet.flag_2, true);
     assert_eq!(packet.variant, Enum::V2);
     assert_eq!(packet.ip, Ipv4Addr::new(192, 168, 200, 176));
+    assert_eq!(packet.mac, [0x11, 0x22, 0x33, 0x44, 0x55, 0x66]);
     assert_eq!(packet.data.as_slice(), "🦀".as_bytes());
 
-    let mut buffer: [u8; 11] = [0; 11];
+    let mut buffer: [u8; 256] = [0; 256];
     let result = packet.pack(&mut buffer).unwrap();
 
     assert_eq!(result, DATA.len());
