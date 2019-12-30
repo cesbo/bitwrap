@@ -59,26 +59,6 @@ impl BitWrapMacro {
         assert_eq!(self.bits, 8, "bitwrap not aligned");
     }
 
-    fn macro_make_check(&mut self, bits: usize) {
-        if self.bits == 8 {
-            let bytes = (bits + 7) / 8;
-
-            self.pack_list.extend(quote! {
-                if #bytes + offset > dst.len() {
-                    return Err(bitwrap::BitWrapError);
-                }
-
-                dst[offset] = 0;
-            });
-
-            self.unpack_list.extend(quote! {
-                if #bytes + offset > src.len() {
-                    return Err(bitwrap::BitWrapError);
-                }
-            });
-        }
-    }
-
     fn macro_make_bits(&mut self, ty: &Ident, bits: usize) {
         let mut bits = bits;
 
@@ -209,9 +189,7 @@ impl BitWrapMacro {
         let mut bits = 0;
 
         let mut field_name = TokenStream::new();
-        field_name.extend(quote! {
-            self.#field_ident
-        });
+        let mut field_value = TokenStream::new();
 
         let mut convert_from = TokenStream::new();
         let mut convert_into = TokenStream::new();
@@ -225,6 +203,25 @@ impl BitWrapMacro {
             if bits == 0 || bits > 64 {
                 panic!("bits argument #1 should be a number in range 1 .. 64");
             }
+        }
+
+        // check buffer len
+        if self.bits == 8 {
+            let bytes = (bits + 7) / 8;
+
+            self.pack_list.extend(quote! {
+                if #bytes + offset > dst.len() {
+                    return Err(bitwrap::BitWrapError);
+                }
+
+                dst[offset] = 0;
+            });
+
+            self.unpack_list.extend(quote! {
+                if #bytes + offset > src.len() {
+                    return Err(bitwrap::BitWrapError);
+                }
+            });
         }
 
         // get type to store bits
@@ -251,58 +248,30 @@ impl BitWrapMacro {
                     }
 
                     match v.to_string().as_str() {
-                        "from" => {
-                            if ! convert_from.is_empty() {
-                                panic!("option 'from' not allowed with option 'name'");
-                            }
-
-                            extend_token_stream(&mut convert_from, &mut iter);
-                            convert_from.extend(quote! {
-                                (value)
-                            });
-                        }
-                        "into" => {
-                            if ! convert_into.is_empty() {
-                                panic!("option 'into' not allowed with option 'value'");
-                            }
-
-                            extend_token_stream(&mut convert_into, &mut iter);
-                            convert_into.extend(quote! {
-                                ( #field_name )
-                            });
-                        }
-
                         "skip" => {
                             if let Some(value) = iter.next() {
                                 skip_value = Some(literal_to_usize(&value));
                             }
                         }
 
-                        "name" => {
-                            if ! convert_from.is_empty() {
-                                panic!("option 'name' not allowed with option 'from'");
-                            }
-
-                            let mut value_name = TokenStream::new();
-                            extend_token_stream(&mut value_name, &mut iter);
-                            field_name = TokenStream::new();
-                            field_name.extend(quote! {
-                                let #value_name
-                            });
+                        "from" => {
+                            extend_token_stream(&mut convert_from, &mut iter);
                             convert_from.extend(quote! {
-                                value
+                                (value)
                             });
                         }
-                        "value" => {
-                            if ! convert_into.is_empty() {
-                                panic!("option 'value' not allowed with option 'into'");
-                            }
-
-                            let mut value_data = TokenStream::new();
-                            extend_token_stream(&mut value_data, &mut iter);
+                        "into" => {
+                            extend_token_stream(&mut convert_into, &mut iter);
                             convert_into.extend(quote! {
-                                ( #value_data ) as #ty
-                            })
+                                ( self.#field_ident )
+                            });
+                        }
+
+                        "name" => {
+                            extend_token_stream(&mut field_name, &mut iter);
+                        }
+                        "value" => {
+                            extend_token_stream(&mut field_value, &mut iter);
                         }
 
                         v => panic!("bits has unexpected argument: {}", v),
@@ -314,10 +283,47 @@ impl BitWrapMacro {
 
         // skip bits
         if let Some(value) = skip_value {
-            self.macro_make_check(bits);
             self.macro_make_skip(bits, value);
             return;
         }
+
+        if ! field_name.is_empty() {
+            //  name + value
+
+            self.pack_list.extend(quote! {
+                let value = ( #field_value ) as #ty ;
+            });
+
+            self.macro_make_bits(&ty, bits);
+
+            self.unpack_list.extend(quote! {
+                let #field_name = value ;
+            });
+
+            return;
+        }
+
+        // set default conversion field -> bits
+        if convert_into.is_empty() {
+            match field_ty {
+                syn::Type::Path(v) if v.path.is_ident("bool") => {
+                    convert_into.extend(quote! {
+                        if self.#field_ident { 1 } else { 0 }
+                    });
+                }
+                _ => {
+                    convert_into.extend(quote! {
+                        self.#field_ident as #ty
+                    })
+                }
+            }
+        }
+
+        self.pack_list.extend(quote! {
+            let value: #ty = #convert_into ;
+        });
+
+        self.macro_make_bits(&ty, bits);
 
         // set default conversion bits -> field
         if convert_from.is_empty() {
@@ -335,32 +341,8 @@ impl BitWrapMacro {
             }
         }
 
-        // set default conversion field -> bits
-        if convert_into.is_empty() {
-            match field_ty {
-                syn::Type::Path(v) if v.path.is_ident("bool") => {
-                    convert_into.extend(quote! {
-                        if #field_name { 1 } else { 0 }
-                    });
-                }
-                _ => {
-                    convert_into.extend(quote! {
-                        #field_name as #ty
-                    })
-                }
-            }
-        }
-
-        self.macro_make_check(bits);
-
-        self.pack_list.extend(quote! {
-            let value: #ty = #convert_into ;
-        });
-
-        self.macro_make_bits(&ty, bits);
-
         self.unpack_list.extend(quote! {
-            #field_name = #convert_from ;
+            self.#field_ident = #convert_from ;
         });
     }
 
