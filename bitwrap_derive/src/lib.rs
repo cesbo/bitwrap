@@ -279,7 +279,7 @@ impl BitWrapMacro {
                             extend_token_stream(&mut token, &mut iter);
 
                             field_assert.extend(quote! {
-                                if ( #token ) as #ty > value {
+                                if ! (value >= ( #token ) as #ty) {
                                     return Err(bitwrap::BitWrapError);
                                 }
                             });
@@ -289,7 +289,17 @@ impl BitWrapMacro {
                             extend_token_stream(&mut token, &mut iter);
 
                             field_assert.extend(quote! {
-                                if value > ( #token ) as #ty {
+                                if ! (value <= ( #token ) as #ty) {
+                                    return Err(bitwrap::BitWrapError);
+                                }
+                            });
+                        }
+                        "eq" => {
+                            let mut token = TokenStream::new();
+                            extend_token_stream(&mut token, &mut iter);
+
+                            field_assert.extend(quote! {
+                                if ! (value == ( #token ) as #ty) {
                                     return Err(bitwrap::BitWrapError);
                                 }
                             });
