@@ -278,8 +278,12 @@ impl BitWrapMacro {
                             let mut token = TokenStream::new();
                             extend_token_stream(&mut token, &mut iter);
 
+                            self.unpack_list.extend(quote! {
+                                let reference_value = ( #token ) as #ty;
+                            });
+
                             field_assert.extend(quote! {
-                                if ! (value >= ( #token ) as #ty) {
+                                if ! (value >= reference_value) {
                                     return Err(bitwrap::BitWrapError);
                                 }
                             });
@@ -288,8 +292,12 @@ impl BitWrapMacro {
                             let mut token = TokenStream::new();
                             extend_token_stream(&mut token, &mut iter);
 
+                            self.unpack_list.extend(quote! {
+                                let reference_value = ( #token ) as #ty;
+                            });
+
                             field_assert.extend(quote! {
-                                if ! (value <= ( #token ) as #ty) {
+                                if ! (value <= reference_value) {
                                     return Err(bitwrap::BitWrapError);
                                 }
                             });
@@ -298,8 +306,12 @@ impl BitWrapMacro {
                             let mut token = TokenStream::new();
                             extend_token_stream(&mut token, &mut iter);
 
+                            self.unpack_list.extend(quote! {
+                                let reference_value = ( #token ) as #ty;
+                            });
+
                             field_assert.extend(quote! {
-                                if ! (value == ( #token ) as #ty) {
+                                if ! (value == reference_value) {
                                     return Err(bitwrap::BitWrapError);
                                 }
                             });
