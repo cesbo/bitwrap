@@ -279,11 +279,11 @@ impl BitWrapMacro {
                             extend_token_stream(&mut token, &mut iter);
 
                             self.unpack_list.extend(quote! {
-                                let reference_value = ( #token ) as #ty;
+                                let value_min = ( #token ) as #ty;
                             });
 
                             field_assert.extend(quote! {
-                                if ! (value >= reference_value) {
+                                if ! (value >= value_min) {
                                     return Err(bitwrap::BitWrapError);
                                 }
                             });
@@ -293,11 +293,11 @@ impl BitWrapMacro {
                             extend_token_stream(&mut token, &mut iter);
 
                             self.unpack_list.extend(quote! {
-                                let reference_value = ( #token ) as #ty;
+                                let value_max = ( #token ) as #ty;
                             });
 
                             field_assert.extend(quote! {
-                                if ! (value <= reference_value) {
+                                if ! (value <= value_max) {
                                     return Err(bitwrap::BitWrapError);
                                 }
                             });
@@ -307,11 +307,11 @@ impl BitWrapMacro {
                             extend_token_stream(&mut token, &mut iter);
 
                             self.unpack_list.extend(quote! {
-                                let reference_value = ( #token ) as #ty;
+                                let value_eq = ( #token ) as #ty;
                             });
 
                             field_assert.extend(quote! {
-                                if ! (value == reference_value) {
+                                if ! (value == value_eq) {
                                     return Err(bitwrap::BitWrapError);
                                 }
                             });
