@@ -292,6 +292,7 @@ impl BitWrapMacro {
 
             self.pack_list.extend(quote! {
                 let value = ( #field_value ) as #ty ;
+                let #field_name = value ;
             });
 
             self.macro_make_bits(&ty, bits);
@@ -354,6 +355,8 @@ impl BitWrapMacro {
 
         if tokens.is_empty() {
             if let syn::Type::Array(_) = field_ty {
+                // [u8; N]
+                // TODO: replace with const generic. issue #3
                 self.pack_list.extend(quote! {
                     let next = offset + self.#field_ident.len();
 
@@ -402,12 +405,21 @@ impl BitWrapMacro {
         extend_token_stream(&mut bytes, &mut iter);
 
         self.pack_list.extend(quote! {
-            offset += self.#field_ident.pack(&mut dst[offset ..])?;
+            let limit = offset + ( #bytes ) as usize;
+            if dst.len() >= limit {
+                offset += self.#field_ident.pack(&mut dst[offset .. limit])?;
+            } else {
+                return Err(bitwrap::BitWrapError);
+            }
         });
 
         self.unpack_list.extend(quote! {
             let limit = offset + ( #bytes ) as usize;
-            offset += self.#field_ident.unpack(&src[offset .. limit])?;
+            if src.len() >= limit {
+                offset += self.#field_ident.unpack(&src[offset .. limit])?;
+            } else {
+                return Err(bitwrap::BitWrapError);
+            }
         });
     }
 

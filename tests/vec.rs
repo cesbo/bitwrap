@@ -24,3 +24,24 @@ fn test_vec() {
     assert_eq!(result, DATA.len());
     assert_eq!(&buffer[.. result], DATA);
 }
+
+
+#[test]
+fn test_vec_overflow() {
+    #[derive(Default, Debug, BitWrap)]
+    struct Packet {
+        #[bits(8, name = data_len, value = self.data.len())]
+        #[bytes(data_len)]
+        data: Vec<u8>,
+    }
+
+    const DATA: &[u8] = &[0xFF, 0xF0, 0x9F, 0xA6, 0x80];
+
+    let mut packet = Packet::default();
+    assert_eq!(packet.unpack(DATA), Err(BitWrapError));
+
+    packet.data.extend_from_slice(&[0xF0, 0x9F, 0xA6, 0x80]);
+
+    let mut buffer: [u8; 4] = [0; 4];
+    assert_eq!(packet.pack(&mut buffer), Err(BitWrapError));
+}
