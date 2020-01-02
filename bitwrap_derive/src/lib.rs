@@ -190,7 +190,6 @@ impl BitWrapMacro {
 
         let mut field_name = TokenStream::new();
         let mut field_value = TokenStream::new();
-        let mut field_assert = TokenStream::new();
 
         let mut convert_from = TokenStream::new();
         let mut convert_into = TokenStream::new();
@@ -274,48 +273,6 @@ impl BitWrapMacro {
                         "value" => {
                             extend_token_stream(&mut field_value, &mut iter);
                         }
-                        "min" => {
-                            let mut token = TokenStream::new();
-                            extend_token_stream(&mut token, &mut iter);
-
-                            self.unpack_list.extend(quote! {
-                                let value_min = ( #token ) as #ty;
-                            });
-
-                            field_assert.extend(quote! {
-                                if ! (value >= value_min) {
-                                    return Err(bitwrap::BitWrapError);
-                                }
-                            });
-                        }
-                        "max" => {
-                            let mut token = TokenStream::new();
-                            extend_token_stream(&mut token, &mut iter);
-
-                            self.unpack_list.extend(quote! {
-                                let value_max = ( #token ) as #ty;
-                            });
-
-                            field_assert.extend(quote! {
-                                if ! (value <= value_max) {
-                                    return Err(bitwrap::BitWrapError);
-                                }
-                            });
-                        }
-                        "eq" => {
-                            let mut token = TokenStream::new();
-                            extend_token_stream(&mut token, &mut iter);
-
-                            self.unpack_list.extend(quote! {
-                                let value_eq = ( #token ) as #ty;
-                            });
-
-                            field_assert.extend(quote! {
-                                if ! (value == value_eq) {
-                                    return Err(bitwrap::BitWrapError);
-                                }
-                            });
-                        }
 
                         v => panic!("bits has unexpected argument: {}", v),
                     }
@@ -340,7 +297,6 @@ impl BitWrapMacro {
             self.macro_make_bits(&ty, bits);
 
             self.unpack_list.extend(quote! {
-                #field_assert
                 let #field_name = value ;
             });
 

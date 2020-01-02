@@ -61,13 +61,7 @@ struct Packet {
     mac: [u8; 6],
 
     // virtual field for the bytes option
-    // unpacked value should be greater or equal to 1
-    // and less or equal to 10
-    #[bits(8,
-        name = data_len,
-        value = self.data.len(),
-        min = 1,
-        max = 10)]
+    #[bits(8, name = data_len, value = self.data.len())]
 
     // call BitWrap method for Vec<T> with defined
     // buffer length where T is u8 or with implemented

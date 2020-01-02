@@ -51,11 +51,7 @@ fn test_readme() {
         #[bytes]
         mac: [u8; 6],
 
-        #[bits(8,
-            name = data_len,
-            value = self.data.len(),
-            min = 1,
-            max = 10)]
+        #[bits(8, name = data_len, value = self.data.len())]
 
         #[bytes(data_len)]
         data: Vec<u8>,
