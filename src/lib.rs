@@ -33,11 +33,7 @@ impl fmt::Display for BitWrapError {
 
 
 #[cfg(feature = "std")]
-impl std::error::Error for BitWrapError {
-    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
-        None
-    }
-}
+impl std::error::Error for BitWrapError {}
 
 
 pub trait BitWrap {
