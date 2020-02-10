@@ -1,6 +1,6 @@
 [package]
 name = "bitwrap"
-version = "0.5.11"
+version = "0.5.12"
 authors = ["Cesbo Developers Team"]
 categories = [
     "data-structures",
