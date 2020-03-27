@@ -136,3 +136,27 @@ impl<T: BitWrap + Default> BitWrap for Vec<T> {
         Ok(skip)
     }
 }
+
+/* TODO: replace with const generic
+impl<const N: usize> BitWrap for [u8; N] {
+    #[inline]
+    fn pack(&self, dst: &mut [u8]) -> Result<usize, BitWrapError> {
+        if dst.len() >= self.len() {
+            dst[.. self.len()].clone_from_slice(self);
+            Ok(self.len())
+        } else {
+            Err(BitWrapError)
+        }
+    }
+
+    #[inline]
+    fn unpack(&mut self, src: &[u8]) -> Result<usize, BitWrapError> {
+        if self.len() >= src.len() {
+            self[.. src.len()].clone_from_slice(src);
+            Ok(src.len())
+        } else {
+            Err(BitWrapError)
+        }
+    }
+}
+*/
