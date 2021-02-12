@@ -42,8 +42,8 @@ struct Packet {
 
     // Fixed 6 bits
     // on 'pack()' set 6 bits with defined value
-    // on 'unpack()' skip 6 bits
-    #[bitfield(6, skip = 0b111111)]
+    #[bitfield(6, value = 0b111111)]
+    _reserved: u8,
 
     // Get 8 bits and convert them to Enum
     // on 'pack()' call 'into(Enum) -> T'

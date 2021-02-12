@@ -7,7 +7,9 @@ use bitwrap::BitWrap;
 fn test_array() {
     #[derive(Default, BitWrap)]
     struct Packet {
-        #[bitfield(8, skip = 0)]
+        #[bitfield(8, value = 0)]
+        _reserved_1: u8,
+
         #[bitfield]
         data: [u8; 4],
     }

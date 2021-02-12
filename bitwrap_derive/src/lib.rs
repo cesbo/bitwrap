@@ -110,51 +110,6 @@ impl BitWrapMacro {
         }
     }
 
-    fn macro_make_skip(&mut self, bits: usize, value: usize) {
-        let mut bits = bits;
-
-        while bits > self.bits {
-            let shift = bits - self.bits; // value left shift
-            let mask = 0xFFu8 >> (8 - self.bits);
-            let v = ((value >> shift) as u8) & mask;
-
-            self.pack_list.extend(quote! {
-                dst[offset] |= #v;
-                offset += 1;
-                dst[offset] = 0;
-            });
-
-            self.unpack_list.extend(quote! {
-                offset += 1;
-            });
-
-            bits -= self.bits;
-            self.bits = 8;
-        }
-
-        self.bits -= bits;
-
-        let shift = self.bits; // byte right shift
-        let mask = 0xFFu8 >> (8 - bits);
-        let v = ((value as u8) & mask) << shift;
-
-        self.pack_list.extend(quote! {
-            dst[offset] |= #v;
-        });
-
-        if shift == 0 {
-            self.pack_list.extend(quote! {
-                offset += 1;
-            });
-
-            self.unpack_list.extend(quote! {
-                offset += 1;
-            });
-
-            self.bits = 8;
-        }
-    }
-
     fn build_bitfield_array(&mut self, field: &syn::Field) {
         self.assert_align();
 
@@ -260,8 +215,6 @@ impl BitWrapMacro {
         let mut convert_from = TokenStream::new();
         let mut convert_into = TokenStream::new();
 
-        let mut skip_value: Option<usize> = None;
-
         // check buffer len
         if self.bits == 8 {
             let bytes = (bits + 7) / 8;
@@ -305,12 +258,6 @@ impl BitWrapMacro {
                     }
 
                     match v.to_string().as_str() {
-                        "skip" => {
-                            if let Some(TokenTree::Literal(value)) = iter.next() {
-                                skip_value = literal_to_usize(&value);
-                            }
-                        }
-
                         "from" => {
                             extend_token_stream(&mut convert_from, &mut iter);
                             convert_from.extend(quote! {
@@ -336,12 +283,6 @@ impl BitWrapMacro {
                 }
                 _ => panic!("bitfield has wrong format"),
             }
-        }
-
-        // skip bits
-        if let Some(value) = skip_value {
-            self.macro_make_skip(bits, value);
-            return;
         }
 
         if ! field_name.is_empty() {
