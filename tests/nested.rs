@@ -10,7 +10,7 @@ fn test_readme_nested() {
         #[bits(8)] protocol: u8,
         #[bits(16)] checksum: u16,
         #[bits] src: Ipv4Addr,
-        #[bytes] dst: Ipv4Addr,
+        #[bits] dst: Ipv4Addr,
     }
 
     const DATA: &[u8] = &[

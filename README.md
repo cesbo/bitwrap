@@ -5,6 +5,8 @@
 BitWrap is a derive macro and trait to declare a struct data member
 with explicit size, in bits.
 
+Minimal Rust version: 1.50
+
 ---
 
 ## BitWrap Trait
@@ -57,7 +59,7 @@ struct Packet {
     ip: std::net::Ipv4Addr
 
     // byte array
-    #[bytes]
+    #[bits]
     mac: [u8; 6],
 
     // virtual field for the bytes option

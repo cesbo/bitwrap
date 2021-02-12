@@ -14,15 +14,8 @@ use core::fmt;
 pub use bitwrap_derive::*;
 
 
-#[derive(PartialEq)]
+#[derive(Debug, PartialEq)]
 pub struct BitWrapError;
-
-
-impl fmt::Debug for BitWrapError {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("BitWrapError").finish()
-    }
-}
 
 
 impl fmt::Display for BitWrapError {
@@ -137,13 +130,14 @@ impl<T: BitWrap + Default> BitWrap for Vec<T> {
     }
 }
 
-/* TODO: replace with const generic
+
 impl<const N: usize> BitWrap for [u8; N] {
     #[inline]
     fn pack(&self, dst: &mut [u8]) -> Result<usize, BitWrapError> {
-        if dst.len() >= self.len() {
-            dst[.. self.len()].clone_from_slice(self);
-            Ok(self.len())
+        let len = self.len();
+        if dst.len() >= len {
+            dst[.. len].clone_from_slice(self);
+            Ok(len)
         } else {
             Err(BitWrapError)
         }
@@ -151,12 +145,12 @@ impl<const N: usize> BitWrap for [u8; N] {
 
     #[inline]
     fn unpack(&mut self, src: &[u8]) -> Result<usize, BitWrapError> {
-        if self.len() >= src.len() {
-            self[.. src.len()].clone_from_slice(src);
-            Ok(src.len())
+        let len = self.len();
+        if src.len() >= len {
+            self.clone_from_slice(&src[.. len]);
+            Ok(len)
         } else {
             Err(BitWrapError)
         }
     }
 }
-*/

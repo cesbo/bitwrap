@@ -8,7 +8,7 @@ fn test_array() {
     #[derive(Default, BitWrap)]
     struct Packet {
         #[bits(8, skip = 0)]
-        #[bytes]
+        #[bits]
         data: [u8; 4],
     }
 

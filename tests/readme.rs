@@ -48,7 +48,7 @@ fn test_readme() {
         #[bits]
         ip: Ipv4Addr,
 
-        #[bytes]
+        #[bits]
         mac: [u8; 6],
 
         #[bits(8, name = data_len, value = self.data.len())]

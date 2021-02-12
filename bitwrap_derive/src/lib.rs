@@ -350,37 +350,9 @@ impl BitWrapMacro {
     fn build_bytes(&mut self, field: &syn::Field, tokens: &TokenStream) {
         self.assert_align();
 
-        let field_ty = &field.ty;
         let field_ident = &field.ident;
 
         if tokens.is_empty() {
-            if let syn::Type::Array(_) = field_ty {
-                // [u8; N]
-                // TODO: replace with const generic. issue #3
-                self.pack_list.extend(quote! {
-                    let next = offset + self.#field_ident.len();
-
-                    if dst.len() >= next {
-                        dst[offset .. next].clone_from_slice(&self.#field_ident);
-                        offset = next;
-                    } else {
-                        return Err(bitwrap::BitWrapError);
-                    }
-                });
-
-                self.unpack_list.extend(quote! {
-                    let next = offset + self.#field_ident.len();
-                    if src.len() >= next {
-                        self.#field_ident.clone_from_slice(&src[offset .. next]);
-                        offset = next;
-                    } else {
-                        return Err(bitwrap::BitWrapError);
-                    }
-                });
-
-                return;
-            }
-
             self.pack_list.extend(quote! {
                 offset += self.#field_ident.pack(&mut dst[offset ..])?;
             });
