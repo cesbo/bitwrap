@@ -129,28 +129,3 @@ impl<T: BitWrap + Default> BitWrap for Vec<T> {
         Ok(skip)
     }
 }
-
-
-impl<const N: usize> BitWrap for [u8; N] {
-    #[inline]
-    fn pack(&self, dst: &mut [u8]) -> Result<usize, BitWrapError> {
-        let len = self.len();
-        if dst.len() >= len {
-            dst[.. len].clone_from_slice(self);
-            Ok(len)
-        } else {
-            Err(BitWrapError)
-        }
-    }
-
-    #[inline]
-    fn unpack(&mut self, src: &[u8]) -> Result<usize, BitWrapError> {
-        let len = self.len();
-        if src.len() >= len {
-            self.clone_from_slice(&src[.. len]);
-            Ok(len)
-        } else {
-            Err(BitWrapError)
-        }
-    }
-}

@@ -5,8 +5,8 @@ use bitwrap::*;
 fn test_vec() {
     #[derive(Default, Debug, BitWrap)]
     struct Packet {
-        #[bits(8, name = data_len, value = self.data.len())]
-        #[bytes(data_len)]
+        #[bitfield(8, name = data_len, value = self.data.len())]
+        #[bitfield(data_len)]
         data: Vec<u8>,
     }
 
@@ -30,8 +30,8 @@ fn test_vec() {
 fn test_vec_overflow() {
     #[derive(Default, Debug, BitWrap)]
     struct Packet {
-        #[bits(8, name = data_len, value = self.data.len())]
-        #[bytes(data_len)]
+        #[bitfield(8, name = data_len, value = self.data.len())]
+        #[bitfield(data_len)]
         data: Vec<u8>,
     }
 

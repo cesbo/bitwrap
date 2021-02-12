@@ -45,8 +45,8 @@ fn test_readme_convert() {
 
     #[derive(Default, BitWrap)]
     struct Packet {
-        #[bits(4, skip = 0)]
-        #[bits(4, from = Coffee::from, into = Coffee::into)]
+        #[bitfield(4, skip = 0)]
+        #[bitfield(4, from = Coffee::from, into = Coffee::into)]
         coffee: Coffee,
     }
 

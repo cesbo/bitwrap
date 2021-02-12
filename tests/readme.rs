@@ -34,26 +34,26 @@ fn test_readme() {
 
     #[derive(BitWrap)]
     struct Packet {
-        #[bits(1)]
+        #[bitfield(1)]
         flag_1: u8,
 
-        #[bits(1)]
+        #[bitfield(1)]
         flag_2: bool,
 
-        #[bits(6, skip = 0b111111)]
+        #[bitfield(6, skip = 0b111111)]
 
-        #[bits(8, from = Enum::from, into = Enum::into)]
+        #[bitfield(8, from = Enum::from, into = Enum::into)]
         variant: Enum,
 
-        #[bits]
+        #[bitfield]
         ip: Ipv4Addr,
 
-        #[bits]
+        #[bitfield]
         mac: [u8; 6],
 
-        #[bits(8, name = data_len, value = self.data.len())]
+        #[bitfield(8, name = data_len, value = self.data.len())]
 
-        #[bytes(data_len)]
+        #[bitfield(data_len)]
         data: Vec<u8>,
     }
 

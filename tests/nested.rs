@@ -6,11 +6,11 @@ use bitwrap::*;
 fn test_readme_nested() {
     #[derive(BitWrap)]
     struct IP4 {
-        #[bits(8)] ttl: u8,
-        #[bits(8)] protocol: u8,
-        #[bits(16)] checksum: u16,
-        #[bits] src: Ipv4Addr,
-        #[bits] dst: Ipv4Addr,
+        #[bitfield(8)] ttl: u8,
+        #[bitfield(8)] protocol: u8,
+        #[bitfield(16)] checksum: u16,
+        #[bitfield] src: Ipv4Addr,
+        #[bitfield] dst: Ipv4Addr,
     }
 
     const DATA: &[u8] = &[

@@ -1,8 +1,8 @@
 [package]
 name = "bitwrap_derive"
-version = "0.6.0"
+version = "1.0.0"
 authors = ["Cesbo Developers Team"]
-description = "derive for bitwrap"
+description = "macro for bitwrap"
 documentation = "https://docs.rs/bitwrap"
 repository = "https://github.com/cesbo/bitwrap"
 edition = "2018"

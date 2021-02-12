@@ -5,8 +5,6 @@
 BitWrap is a derive macro and trait to declare a struct data member
 with explicit size, in bits.
 
-Minimal Rust version: 1.50
-
 ---
 
 ## BitWrap Trait
@@ -33,42 +31,41 @@ use bitwrap::BitWrap;
 #[derive(BitWrap)]
 struct Packet {
     // Get/Set bit
-    #[bits(1)]
+    #[bitfield(1)]
     flag_1: u8,
 
     // Get/Set bit and convert into bool:
     // - 0 - false
     // - 1 - true
-    #[bits(1)]
+    #[bitfield(1)]
     flag_2: bool,
 
     // Fixed 6 bits
     // on 'pack()' set 6 bits with defined value
     // on 'unpack()' skip 6 bits
-    #[bits(6, skip = 0b111111)]
+    #[bitfield(6, skip = 0b111111)]
 
     // Get 8 bits and convert them to Enum
     // on 'pack()' call 'into(Enum) -> T'
     // on 'unpack()' call 'from(T) -> Enum'
     // T is a unsigned depends of the bit field size
-    #[bits(8, from = Enum::from, into = Enum::into)]
+    #[bitfield(8, from = Enum::from, into = Enum::into)]
     variant: Enum,
 
     // call BitWrap methods for Ipv4Addr
-    #[bits]
+    #[bitfield]
     ip: std::net::Ipv4Addr
 
     // byte array
-    #[bits]
+    #[bitfield]
     mac: [u8; 6],
 
-    // virtual field for the bytes option
-    #[bits(8, name = data_len, value = self.data.len())]
+    // virtual field with attribute `name` to define buffer length
+    #[bitfield(8, name = data_len, value = self.data.len())]
 
-    // call BitWrap method for Vec<T> with defined
-    // buffer length where T is u8 or with implemented
-    // BitWrap + Default traits
-    #[bytes(data_len)]
+    // get slice of `data_len` bytes and call BitWrap method for Vec<T>
+    // where T is u8 or with implemented BitWrap + Default traits
+    #[bitfield(data_len)]
     data: Vec<u8>,
 }
 ```

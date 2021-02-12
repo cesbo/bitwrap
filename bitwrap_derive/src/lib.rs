@@ -1,17 +1,18 @@
 extern crate proc_macro;
 
-use proc_macro2::{
-    TokenTree,
-    TokenStream,
-    Ident,
-    token_stream::IntoIter,
-};
-
-use quote::quote;
-
-use syn::{
-    self,
-    parse_macro_input,
+use {
+    proc_macro2::{
+        Ident,
+        Literal,
+        TokenStream,
+        TokenTree,
+        token_stream::IntoIter,
+    },
+    quote::quote,
+    syn::{
+        self,
+        parse_macro_input,
+    },
 };
 
 
@@ -24,18 +25,14 @@ struct BitWrapMacro {
 
 
 // convert TokenTree literal to usize
-fn literal_to_usize(item: &TokenTree) -> usize {
-    if let TokenTree::Literal(v) = item {
-        syn::LitInt::from(v.clone()).base10_parse::<usize>().unwrap_or(0)
-    } else {
-        0
-    }
+#[inline]
+fn literal_to_usize(v: &Literal) -> Option<usize> {
+    syn::LitInt::from(v.clone()).base10_parse::<usize>().ok()
 }
 
 
 // push attribute option tokens to TokenStream
-fn extend_token_stream(stream: &mut TokenStream, iter: &mut IntoIter)
-{
+fn extend_token_stream(stream: &mut TokenStream, iter: &mut IntoIter) {
     while let Some(item) = iter.next() {
         match item {
             TokenTree::Punct(v) if v.as_char() == ',' => break,
@@ -158,21 +155,67 @@ impl BitWrapMacro {
         }
     }
 
-    fn build_bits(&mut self, field: &syn::Field, tokens: &TokenStream) {
+    fn build_bitfield_array(&mut self, field: &syn::Field) {
+        self.assert_align();
+
+        let field_ident = &field.ident;
+
+        self.pack_list.extend(quote! {
+            if dst.len() >= limit {
+                offset += self.#field_ident.pack(&mut dst[offset .. limit])?;
+            } else {
+                return Err(bitwrap::BitWrapError);
+            }
+        });
+
+        self.unpack_list.extend(quote! {
+            if src.len() >= limit {
+                offset += self.#field_ident.unpack(&src[offset .. limit])?;
+            } else {
+                return Err(bitwrap::BitWrapError);
+            }
+        });
+    }
+
+    fn build_bitfield(&mut self, field: &syn::Field, tokens: &TokenStream) {
         let field_ty = &field.ty;
         let field_ident = &field.ident;
 
-        // Nested
+        // bitfield attribute without arguments
         if tokens.is_empty() {
-            self.assert_align();
+            if let syn::Type::Array(_) = field_ty {
+                // [u8; N]
+                self.pack_list.extend(quote! {
+                    let next = offset + self.#field_ident.len();
+                    if dst.len() >= next {
+                        dst[offset .. next].clone_from_slice(&self.#field_ident);
+                        offset = next;
+                    } else {
+                        return Err(bitwrap::BitWrapError);
+                    }
+                });
 
-            self.pack_list.extend(quote! {
-                offset += self.#field_ident.pack(&mut dst[offset ..])?;
-            });
+                self.unpack_list.extend(quote! {
+                    let next = offset + self.#field_ident.len();
+                    if src.len() >= next {
+                        self.#field_ident.clone_from_slice(&src[offset .. next]);
+                        offset = next;
+                    } else {
+                        return Err(bitwrap::BitWrapError);
+                    }
+                });
+            } else {
+                // Any object with BitWrap implementation
+                self.pack_list.extend(quote! {
+                    let limit = dst.len();
+                });
 
-            self.unpack_list.extend(quote! {
-                offset += self.#field_ident.unpack(&src[offset ..])?;
-            });
+                self.unpack_list.extend(quote! {
+                    let limit = src.len();
+                });
+
+                self.build_bitfield_array(field);
+            }
 
             return;
         }
@@ -183,10 +226,33 @@ impl BitWrapMacro {
             TokenTree::Group(v) => v.stream(),
             _ => unreachable!(),
         };
-
         let mut iter = group.into_iter();
 
-        let mut bits = 0;
+        // check first_token
+        let first_token = iter.next().unwrap();
+        let bits = match first_token {
+            TokenTree::Literal(v) => {
+                literal_to_usize(&v).unwrap_or(0)
+            }
+            TokenTree::Ident(v) => {
+                self.pack_list.extend(quote! {
+                    let limit = offset + ( #v ) as usize;
+                });
+
+                self.unpack_list.extend(quote! {
+                    let limit = offset + ( #v ) as usize;
+                });
+
+                self.build_bitfield_array(field);
+
+                return;
+            }
+            _ => panic!("bitfield argument #1 has wrong type")
+        };
+
+        if bits == 0 || bits > 64 {
+            panic!("bitfield argument #1 should be a number in range 1 .. 64");
+        }
 
         let mut field_name = TokenStream::new();
         let mut field_value = TokenStream::new();
@@ -195,15 +261,6 @@ impl BitWrapMacro {
         let mut convert_into = TokenStream::new();
 
         let mut skip_value: Option<usize> = None;
-
-        // get bits
-        if let Some(item) = iter.next() {
-            bits = literal_to_usize(&item);
-
-            if bits == 0 || bits > 64 {
-                panic!("bits argument #1 should be a number in range 1 .. 64");
-            }
-        }
 
         // check buffer len
         if self.bits == 8 {
@@ -249,8 +306,8 @@ impl BitWrapMacro {
 
                     match v.to_string().as_str() {
                         "skip" => {
-                            if let Some(value) = iter.next() {
-                                skip_value = Some(literal_to_usize(&value));
+                            if let Some(TokenTree::Literal(value)) = iter.next() {
+                                skip_value = literal_to_usize(&value);
                             }
                         }
 
@@ -274,10 +331,10 @@ impl BitWrapMacro {
                             extend_token_stream(&mut field_value, &mut iter);
                         }
 
-                        v => panic!("bits has unexpected argument: {}", v),
+                        v => panic!("bitfield has unexpected argument: {}", v),
                     }
                 }
-                _ => panic!("bits has wrong format"),
+                _ => panic!("bitfield has wrong format"),
             }
         }
 
@@ -347,59 +404,10 @@ impl BitWrapMacro {
         });
     }
 
-    fn build_bytes(&mut self, field: &syn::Field, tokens: &TokenStream) {
-        self.assert_align();
-
-        let field_ident = &field.ident;
-
-        if tokens.is_empty() {
-            self.pack_list.extend(quote! {
-                offset += self.#field_ident.pack(&mut dst[offset ..])?;
-            });
-
-            self.unpack_list.extend(quote! {
-                offset += self.#field_ident.unpack(&src[offset ..])?;
-            });
-
-            return;
-        }
-
-        let tokens = tokens.clone();
-        let tree = tokens.into_iter().next().unwrap();
-        let group = match tree {
-            TokenTree::Group(v) => v.stream(),
-            _ => unreachable!(),
-        };
-
-        let mut iter = group.into_iter();
-
-        let mut bytes = TokenStream::new();
-        extend_token_stream(&mut bytes, &mut iter);
-
-        self.pack_list.extend(quote! {
-            let limit = offset + ( #bytes ) as usize;
-            if dst.len() >= limit {
-                offset += self.#field_ident.pack(&mut dst[offset .. limit])?;
-            } else {
-                return Err(bitwrap::BitWrapError);
-            }
-        });
-
-        self.unpack_list.extend(quote! {
-            let limit = offset + ( #bytes ) as usize;
-            if src.len() >= limit {
-                offset += self.#field_ident.unpack(&src[offset .. limit])?;
-            } else {
-                return Err(bitwrap::BitWrapError);
-            }
-        });
-    }
-
     fn build_field(&mut self, field: &syn::Field) {
         for attr in field.attrs.iter().filter(|v| v.path.segments.len() == 1) {
             match attr.path.segments[0].ident.to_string().as_str() {
-                "bits" => self.build_bits(field, &attr.tokens),
-                "bytes" => self.build_bytes(field, &attr.tokens),
+                "bitfield" => self.build_bitfield(field, &attr.tokens),
                 _ => {}
             };
         }
@@ -443,7 +451,7 @@ impl BitWrapMacro {
 }
 
 
-#[proc_macro_derive(BitWrap, attributes(bits, bytes))]
+#[proc_macro_derive(BitWrap, attributes(bitfield))]
 pub fn bitwrap_derive(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     let input = parse_macro_input!(input as syn::DeriveInput);
 

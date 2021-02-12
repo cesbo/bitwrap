@@ -7,14 +7,14 @@ fn test_bits() {
 
     #[derive(Default, Debug, BitWrap)]
     struct Packet {
-        #[bits(6)] rshift_test: u8,
-        #[bits(4)] lshift_rshift_test: u8,
-        #[bits(6)] skip_1: u8,
-        #[bits(16)] or_test: u16,
-        #[bits(4)] skip_2: u8,
-        #[bits(12)] or_mask_test: u16,
-        #[bits(13)] or_rshift_test: u16,
-        #[bits(3)] skip_3: u8,
+        #[bitfield(6)] rshift_test: u8,
+        #[bitfield(4)] lshift_rshift_test: u8,
+        #[bitfield(6)] skip_1: u8,
+        #[bitfield(16)] or_test: u16,
+        #[bitfield(4)] skip_2: u8,
+        #[bitfield(12)] or_mask_test: u16,
+        #[bitfield(13)] or_rshift_test: u16,
+        #[bitfield(3)] skip_3: u8,
     }
 
     let mut packet = Packet::default();
@@ -45,7 +45,7 @@ fn test_bits_overflow() {
 
     #[derive(Default, Debug, BitWrap)]
     struct Packet {
-        #[bits(16)] value: u8,
+        #[bitfield(16)] value: u8,
     }
 
     let mut packet = Packet::default();
@@ -68,7 +68,7 @@ fn test_overflow() {
 
     #[derive(Default, Debug, BitWrap)]
     struct Packet {
-        #[bits(32)] value: u32,
+        #[bitfield(32)] value: u32,
     }
 
     let mut packet = Packet::default();

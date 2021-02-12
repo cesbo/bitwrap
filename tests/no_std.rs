@@ -7,10 +7,10 @@ use bitwrap::BitWrap;
 fn test_readme_no_std() {
     #[derive(Default, BitWrap)]
     struct Packet {
-        #[bits(1)] flag_1: u8,
-        #[bits(1)] flag_2: u8,
-        #[bits(2)] data_3: u8,
-        #[bits(12)] data_4: u16,
+        #[bitfield(1)] flag_1: u8,
+        #[bitfield(1)] flag_2: u8,
+        #[bitfield(2)] data_3: u8,
+        #[bitfield(12)] data_4: u16,
     }
 
     const DATA: &[u8] = &[0xA2, 0x34];

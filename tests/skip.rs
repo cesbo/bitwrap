@@ -5,10 +5,10 @@ use bitwrap::*;
 fn test_readme_skip() {
     #[derive(Default, BitWrap)]
     struct Packet {
-        #[bits(6)] f1: u8,
-        #[bits(2, skip = 0)]
-        #[bits(4, skip = 0b1111)]
-        #[bits(4)] f2: u8,
+        #[bitfield(6)] f1: u8,
+        #[bitfield(2, skip = 0)]
+        #[bitfield(4, skip = 0b1111)]
+        #[bitfield(4)] f2: u8,
     }
 
     const DATA: &[u8] = &[0xAC, 0xF5];
