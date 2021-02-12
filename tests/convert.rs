@@ -45,8 +45,7 @@ fn test_readme_convert() {
 
     #[derive(Default, BitWrap)]
     struct Packet {
-        #[bitfield(4, value = 0)]
-        reserved: u8,
+        #[bitfield(4, name = _reserved, value = 0)]
         #[bitfield(4, from = Coffee::from, into = Coffee::into)]
         coffee: Coffee,
     }

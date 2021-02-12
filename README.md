@@ -40,10 +40,9 @@ struct Packet {
     #[bitfield(1)]
     flag_2: bool,
 
-    // Fixed 6 bits
+    // virtual field with option `name` to skip reserved bits
     // on 'pack()' set 6 bits with defined value
-    #[bitfield(6, value = 0b111111)]
-    _reserved: u8,
+    #[bitfield(6, name = _reserved, value = 0b111111)]
 
     // Get 8 bits and convert them to Enum
     // on 'pack()' call 'into(Enum) -> T'
@@ -60,7 +59,7 @@ struct Packet {
     #[bitfield]
     mac: [u8; 6],
 
-    // virtual field with attribute `name` to define buffer length
+    // virtual field with optn `name` to define buffer length
     #[bitfield(8, name = data_len, value = self.data.len())]
 
     // get slice of `data_len` bytes and call BitWrap method for Vec<T>

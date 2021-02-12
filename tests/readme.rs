@@ -40,8 +40,7 @@ fn test_readme() {
         #[bitfield(1)]
         flag_2: bool,
 
-        #[bitfield(6, value = 0b111111)]
-        _reserved_1: u8,
+        #[bitfield(6, name = _reserved, value = 0b111111)]
 
         #[bitfield(8, from = Enum::from, into = Enum::into)]
         variant: Enum,
@@ -63,7 +62,6 @@ fn test_readme() {
             Self {
                 flag_1: 0,
                 flag_2: false,
-                _reserved_1: 0,
                 variant: Enum::default(),
                 ip: std::net::Ipv4Addr::new(0, 0, 0, 0),
                 mac: [0; 6],

@@ -6,8 +6,8 @@ fn test_readme_skip() {
     #[derive(Default, BitWrap)]
     struct Packet {
         #[bitfield(6)] f1: u8,
-        #[bitfield(2, value = 0)] _reserved_1: u8,
-        #[bitfield(4, value = 0b1111)] _reserved_2: u8,
+        #[bitfield(2, name = _reserved_1, value = 0)]
+        #[bitfield(4, name = _reserved_2, value = 0b1111)]
         #[bitfield(4)] f2: u8,
     }
 
