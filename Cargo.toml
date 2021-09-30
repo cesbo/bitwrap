@@ -30,4 +30,4 @@ default = [
 members = [".", "bitwrap_derive"]
 
 [dependencies]
-bitwrap_derive = { path = "./bitwrap_derive", version = "1.0.1" }
+bitwrap_derive = { path = "./bitwrap_derive", version = "1.1.0" }
