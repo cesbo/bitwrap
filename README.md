@@ -40,7 +40,7 @@ use {
 };
 
 #[derive(Debug, PartialEq, Clone, Copy)]
-    enum Variant { Value55, ValueAA }
+enum Variant { Value55, ValueAA }
 
 impl Default for Variant {
     fn default() -> Self { Variant::Value55 }

@@ -205,8 +205,8 @@ impl BitWrapMacro {
             _ => panic!("bitfield argument #1 has wrong type")
         };
 
-        if bits == 0 || bits > 64 {
-            panic!("bitfield argument #1 should be a number in range 1 .. 64");
+        if bits == 0 || bits > 128 {
+            panic!("bitfield argument #1 should be a number in range 1 ..= 128");
         }
 
         let mut field_name = TokenStream::new();
