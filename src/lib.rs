@@ -29,7 +29,7 @@ impl fmt::Display for BitWrapError {
 impl std::error::Error for BitWrapError {}
 
 
-pub trait BitWrap {
+pub trait BitWrapExt {
     /// Build byte array
     fn pack(&self, dst: &mut [u8]) -> Result<usize, BitWrapError>;
 
@@ -39,7 +39,7 @@ pub trait BitWrap {
 
 
 #[cfg(feature = "std")]
-impl BitWrap for std::net::Ipv4Addr {
+impl BitWrapExt for std::net::Ipv4Addr {
     #[inline]
     fn pack(&self, dst: &mut [u8]) -> Result<usize, BitWrapError> {
         if dst.len() >= 4 {
@@ -63,7 +63,7 @@ impl BitWrap for std::net::Ipv4Addr {
 
 
 #[cfg(feature = "std")]
-impl BitWrap for std::net::Ipv6Addr {
+impl BitWrapExt for std::net::Ipv6Addr {
     #[inline]
     fn pack(&self, dst: &mut [u8]) -> Result<usize, BitWrapError> {
         if dst.len() >= 16 {
@@ -87,7 +87,7 @@ impl BitWrap for std::net::Ipv6Addr {
 
 
 #[cfg(feature = "std")]
-impl BitWrap for Vec<u8> {
+impl BitWrapExt for Vec<u8> {
     #[inline]
     fn pack(&self, dst: &mut [u8]) -> Result<usize, BitWrapError> {
         let len = self.len();
@@ -108,7 +108,7 @@ impl BitWrap for Vec<u8> {
 
 
 #[cfg(feature = "std")]
-impl<T: BitWrap + Default> BitWrap for Vec<T> {
+impl<T: BitWrapExt + Default> BitWrapExt for Vec<T> {
     #[inline]
     fn pack(&self, dst: &mut [u8]) -> Result<usize, BitWrapError> {
         let mut skip = 0;

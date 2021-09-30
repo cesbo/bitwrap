@@ -33,7 +33,7 @@ fn literal_to_usize(v: &Literal) -> Option<usize> {
 
 // push attribute option tokens to TokenStream
 fn extend_token_stream(stream: &mut TokenStream, iter: &mut IntoIter) {
-    while let Some(item) = iter.next() {
+    for item in iter {
         match item {
             TokenTree::Punct(v) if v.as_char() == ',' => break,
             v => stream.extend(quote! { #v }),
@@ -293,6 +293,8 @@ impl BitWrapMacro {
                 let #field_name = value ;
             });
 
+            // TODO: skip if name started with _
+
             self.macro_make_bits(&ty, bits);
 
             self.unpack_list.extend(quote! {
@@ -346,11 +348,11 @@ impl BitWrapMacro {
     }
 
     fn build_field(&mut self, field: &syn::Field) {
+        let bf = Ident::new("bitfield", proc_macro2::Span::call_site());
         for attr in field.attrs.iter().filter(|v| v.path.segments.len() == 1) {
-            match attr.path.segments[0].ident.to_string().as_str() {
-                "bitfield" => self.build_bitfield(field, &attr.tokens),
-                _ => {}
-            };
+            if attr.path.segments[0].ident == bf {
+                self.build_bitfield(field, &attr.tokens);
+            }
         }
     }
 
@@ -374,7 +376,7 @@ impl BitWrapMacro {
         let unpack_list = &self.unpack_list;
 
         quote! {
-            impl bitwrap::BitWrap for #struct_id {
+            impl bitwrap::BitWrapExt for #struct_id {
                 fn pack(&self, dst: &mut [u8]) -> Result<usize, bitwrap::BitWrapError> {
                     let mut offset: usize = 0;
                     #pack_list

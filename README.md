@@ -7,51 +7,45 @@ with explicit size, in bits.
 
 ---
 
-## BitWrap Trait
+## BitWrapExt Trait
 
-BitWrap trait declares 2 methods:
+Trait declares 2 methods:
 
 ```rust
 fn pack(&self, dst: &mut [u8]) -> Result<usize, BitWrapError>
 ```
 
-`pack` method serialize struct fields into dst array
+`pack` method serialize struct fields into `dst` array
 
 ```rust
 fn unpack(&mut self, src: &[u8]) -> Result<usize, BitWrapError>
 ```
 
-`unpack` method deserialize struct fields from src array
+`unpack` method deserialize struct fields from `src` array
 
 ## BitWrap Macro
 
 ```rust
-use bitwrap::BitWrap;
+use bitwrap::{BitWrap, BitWrapExt};
 
 #[derive(BitWrap)]
 struct Packet {
-    // Get/Set bit
+    // single bit field
     #[bitfield(1)]
-    flag_1: u8,
+    field_1: u8,
 
-    // Get/Set bit and convert into bool:
+    // single bit field as boolean:
     // - 0 - false
     // - 1 - true
-    #[bitfield(1)]
-    flag_2: bool,
+    #[bitfield]
+    field_2: bool,
 
-    // virtual field with option `name` to skip reserved bits
-    // on 'pack()' set 6 bits with defined value
+    // virtual field with option `name`
+    // unpack reads bits to the internall variable `_reserved`
+    // pack sets 6 bits from defined `value`
     #[bitfield(6, name = _reserved, value = 0b111111)]
 
-    // Get 8 bits and convert them to Enum
-    // on 'pack()' call 'into(Enum) -> T'
-    // on 'unpack()' call 'from(T) -> Enum'
-    // T is a unsigned depends of the bit field size
-    #[bitfield(8, from = Enum::from, into = Enum::into)]
-    variant: Enum,
-
-    // call BitWrap methods for Ipv4Addr
+    // call BitWrapExt methods for Ipv4Addr
     #[bitfield]
     ip: std::net::Ipv4Addr
 
@@ -62,8 +56,8 @@ struct Packet {
     // virtual field with optn `name` to define buffer length
     #[bitfield(8, name = data_len, value = self.data.len())]
 
-    // get slice of `data_len` bytes and call BitWrap method for Vec<T>
-    // where T is u8 or with implemented BitWrap + Default traits
+    // get slice of `data_len` bytes and call BitWrapExt method for Vec<T>
+    // where T is u8 or with implemented BitWrapExt + Default traits
     #[bitfield(data_len)]
     data: Vec<u8>,
 }

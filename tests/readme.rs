@@ -1,33 +1,44 @@
-use std::net::Ipv4Addr;
-use bitwrap::BitWrap;
+use {
+    std::net::Ipv4Addr,
+    bitwrap::{
+        BitWrap,
+        BitWrapExt,
+        BitWrapError,
+    },
+};
+
 
 #[test]
 fn test_readme() {
     #[derive(Debug, PartialEq, Clone, Copy)]
-    enum Enum {
-        V1,
-        V2,
+    enum Variant {
+        Value55,
+        ValueAA,
     }
 
-    impl Default for Enum {
-        fn default() -> Self { Enum::V1 }
-    }
-
-    impl From<u8> for Enum {
-        fn from(value: u8) -> Self {
-            match value {
-                0x55 => Enum::V1,
-                0xAA => Enum::V2,
-                _ => unreachable!(),
+    impl BitWrapExt for Variant {
+        fn pack(&self, dst: &mut [u8]) -> Result<usize, BitWrapError> {
+            if ! dst.is_empty() {
+                dst[0] = match self {
+                    Variant::Value55 => 0x55,
+                    Variant::ValueAA => 0xAA,
+                };
+                Ok(1)
+            } else {
+                Err(BitWrapError)
             }
         }
-    }
 
-    impl Into<u8> for Enum {
-        fn into(self) -> u8 {
-            match self {
-                Enum::V1 => 0x55,
-                Enum::V2 => 0xAA,
+        fn unpack(&mut self, src: &[u8]) -> Result<usize, BitWrapError> {
+            if ! src.is_empty() {
+                *self = match src[0] {
+                    0x55 => Variant::Value55,
+                    0xAA => Variant::ValueAA,
+                    _ => return Err(BitWrapError),
+                };
+                Ok(1)
+            } else {
+                Err(BitWrapError)
             }
         }
     }
@@ -35,15 +46,15 @@ fn test_readme() {
     #[derive(BitWrap)]
     struct Packet {
         #[bitfield(1)]
-        flag_1: u8,
+        field_1: u8,
 
         #[bitfield(1)]
-        flag_2: bool,
+        field_2: bool,
 
         #[bitfield(6, name = _reserved, value = 0b111111)]
 
-        #[bitfield(8, from = Enum::from, into = Enum::into)]
-        variant: Enum,
+        #[bitfield]
+        variant: Variant,
 
         #[bitfield]
         ip: Ipv4Addr,
@@ -60,9 +71,9 @@ fn test_readme() {
     impl Default for Packet {
         fn default() -> Self {
             Self {
-                flag_1: 0,
-                flag_2: false,
-                variant: Enum::default(),
+                field_1: 0,
+                field_2: false,
+                variant: Variant::Value55,
                 ip: std::net::Ipv4Addr::new(0, 0, 0, 0),
                 mac: [0; 6],
                 data: Vec::default(),
@@ -83,9 +94,9 @@ fn test_readme() {
     let result = packet.unpack(DATA).unwrap();
 
     assert_eq!(result, DATA.len());
-    assert_eq!(packet.flag_1, 1);
-    assert_eq!(packet.flag_2, true);
-    assert_eq!(packet.variant, Enum::V2);
+    assert_eq!(packet.field_1, 1);
+    assert!(packet.field_2);
+    assert_eq!(packet.variant, Variant::ValueAA);
     assert_eq!(packet.ip, Ipv4Addr::new(192, 168, 200, 176));
     assert_eq!(packet.mac, [0x11, 0x22, 0x33, 0x44, 0x55, 0x66]);
     assert_eq!(packet.data.as_slice(), "🦀".as_bytes());

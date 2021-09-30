@@ -31,9 +31,9 @@ fn test_readme_convert() {
         }
     }
 
-    impl Into<u8> for Coffee {
-        fn into(self) -> u8 {
-            match self {
+    impl From<Coffee> for u8 {
+        fn from(value: Coffee) -> u8 {
+            match value {
                 Coffee::Water => 0,
                 Coffee::Latte => 1,
                 Coffee::Cappuccino => 2,

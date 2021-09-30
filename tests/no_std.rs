@@ -1,6 +1,11 @@
 #![no_std]
 
-use bitwrap::BitWrap;
+use {
+    bitwrap::{
+        BitWrap,
+        BitWrapExt,
+    },
+};
 
 
 #[test]
