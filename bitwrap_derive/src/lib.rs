@@ -42,6 +42,24 @@ fn extend_token_stream(stream: &mut TokenStream, iter: &mut IntoIter) {
 }
 
 
+fn bits_type(bits: usize) -> Ident {
+    Ident::new(
+        if bits <= 8 {
+            "u8"
+        } else if bits <= 16 {
+            "u16"
+        } else if bits <= 32 {
+            "u32"
+        } else if bits <= 64 {
+            "u64"
+        } else {
+            "u128"
+        },
+        proc_macro2::Span::call_site()
+    )
+}
+
+
 impl BitWrapMacro {
     fn new(ident: &Ident) -> Self {
         Self {
@@ -132,48 +150,54 @@ impl BitWrapMacro {
         });
     }
 
-    fn build_bitfield(&mut self, field: &syn::Field, tokens: &TokenStream) {
+    fn build_bitfield_nested(&mut self, field: &syn::Field) {
         let field_ty = &field.ty;
         let field_ident = &field.ident;
 
-        // bitfield attribute without arguments
+        if let syn::Type::Array(_) = field_ty {
+            // [u8; N]
+            self.pack_list.extend(quote! {
+                let next = offset + self.#field_ident.len();
+                if dst.len() >= next {
+                    dst[offset .. next].clone_from_slice(&self.#field_ident);
+                    offset = next;
+                } else {
+                    return Err(bitwrap::BitWrapError);
+                }
+            });
+
+            self.unpack_list.extend(quote! {
+                let next = offset + self.#field_ident.len();
+                if src.len() >= next {
+                    self.#field_ident.clone_from_slice(&src[offset .. next]);
+                    offset = next;
+                } else {
+                    return Err(bitwrap::BitWrapError);
+                }
+            });
+        } else {
+            // Any object with BitWrap implementation
+            self.pack_list.extend(quote! {
+                let limit = dst.len();
+            });
+
+            self.unpack_list.extend(quote! {
+                let limit = src.len();
+            });
+
+            self.build_bitfield_array(field);
+        }
+    }
+
+    fn build_bitfield(&mut self, field: &syn::Field, tokens: &TokenStream) {
+        // nested bitfield (attribute without arguments)
         if tokens.is_empty() {
-            if let syn::Type::Array(_) = field_ty {
-                // [u8; N]
-                self.pack_list.extend(quote! {
-                    let next = offset + self.#field_ident.len();
-                    if dst.len() >= next {
-                        dst[offset .. next].clone_from_slice(&self.#field_ident);
-                        offset = next;
-                    } else {
-                        return Err(bitwrap::BitWrapError);
-                    }
-                });
-
-                self.unpack_list.extend(quote! {
-                    let next = offset + self.#field_ident.len();
-                    if src.len() >= next {
-                        self.#field_ident.clone_from_slice(&src[offset .. next]);
-                        offset = next;
-                    } else {
-                        return Err(bitwrap::BitWrapError);
-                    }
-                });
-            } else {
-                // Any object with BitWrap implementation
-                self.pack_list.extend(quote! {
-                    let limit = dst.len();
-                });
-
-                self.unpack_list.extend(quote! {
-                    let limit = src.len();
-                });
-
-                self.build_bitfield_array(field);
-            }
-
+            self.build_bitfield_nested(field);
             return;
         }
+
+        let field_ty = &field.ty;
+        let field_ident = &field.ident;
 
         let tokens = tokens.clone();
         let tree = tokens.into_iter().next().unwrap();
@@ -212,9 +236,6 @@ impl BitWrapMacro {
         let mut field_name = TokenStream::new();
         let mut field_value = TokenStream::new();
 
-        let mut convert_from = TokenStream::new();
-        let mut convert_into = TokenStream::new();
-
         // check buffer len
         if self.bits == 8 {
             let bytes = (bits + 7) / 8;
@@ -235,18 +256,7 @@ impl BitWrapMacro {
         }
 
         // get type to store bits
-        let convert_ty = if bits <= 8 {
-            "u8"
-        } else if bits <= 16 {
-            "u16"
-        } else if bits <= 32 {
-            "u32"
-        } else if bits <= 64 {
-            "u64"
-        } else {
-            "u128"
-        };
-        let ty = Ident::new(convert_ty, proc_macro2::Span::call_site());
+        let ty = bits_type(bits);
 
         // parse attributes
         while let Some(item) = iter.next() {
@@ -277,6 +287,10 @@ impl BitWrapMacro {
         if ! field_name.is_empty() {
             //  name + value
 
+            if field_value.is_empty() {
+                panic!("value is required for named filed");
+            }
+
             self.pack_list.extend(quote! {
                 let value = ( #field_value ) as #ty ;
                 let #field_name = value ;
@@ -296,40 +310,32 @@ impl BitWrapMacro {
         // set default conversion field -> bits
         match field_ty {
             syn::Type::Path(v) if v.path.is_ident("bool") => {
-                convert_into.extend(quote! {
-                    if self.#field_ident { 1 } else { 0 }
+                self.pack_list.extend(quote! {
+                    let value: #ty = if self.#field_ident { 1 } else { 0 } ;
                 });
             }
             _ => {
-                convert_into.extend(quote! {
-                    #ty::try_from(self.#field_ident)?
-                })
+                self.pack_list.extend(quote! {
+                    let value: #ty = #ty::try_from(self.#field_ident)? ;
+                });
             }
         }
-
-        self.pack_list.extend(quote! {
-            let value: #ty = #convert_into ;
-        });
 
         self.macro_make_bits(&ty, bits);
 
         // set default conversion bits -> field
         match field_ty {
             syn::Type::Path(v) if v.path.is_ident("bool") => {
-                convert_from.extend(quote! {
-                    value != 0
+                self.unpack_list.extend(quote! {
+                    self.#field_ident = value != 0 ;
                 });
             }
             _ => {
-                convert_from.extend(quote! {
-                    #field_ty::try_from(value)?
-                })
+                self.unpack_list.extend(quote! {
+                    self.#field_ident = #field_ty::try_from(value)? ;
+                });
             }
         }
-
-        self.unpack_list.extend(quote! {
-            self.#field_ident = #convert_from ;
-        });
     }
 
     fn build_field(&mut self, field: &syn::Field) {
