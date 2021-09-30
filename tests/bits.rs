@@ -40,29 +40,6 @@ fn test_bits() {
 
 
 #[test]
-fn test_bits_overflow() {
-    const DATA: &[u8] = &[0x00, 0xAA];
-
-    #[derive(Default, Debug, BitWrap)]
-    struct Packet {
-        #[bitfield(16)] value: u8,
-    }
-
-    let mut packet = Packet::default();
-    let result = packet.unpack(DATA).unwrap();
-    assert_eq!(result, DATA.len());
-    assert_eq!(packet.value, 0xAA);
-
-    let mut buffer: Vec<u8> = Vec::new();
-    buffer.resize(64, 0);
-    let result = packet.pack(&mut buffer).unwrap();
-
-    assert_eq!(result, DATA.len());
-    assert_eq!(&buffer[.. result], DATA);
-}
-
-
-#[test]
 fn test_overflow() {
     const DATA: &[u8] = &[0xCE, 0x5B, 0x00];
 

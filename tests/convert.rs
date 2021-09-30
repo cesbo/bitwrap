@@ -1,6 +1,12 @@
 #![no_std]
 
-use bitwrap::*;
+use {
+    core::convert::{
+        TryFrom,
+        Infallible,
+    },
+    bitwrap::*,
+};
 
 
 #[test]
@@ -18,27 +24,31 @@ fn test_readme_convert() {
         fn default() -> Self { Coffee::Water }
     }
 
-    impl From<u8> for Coffee {
-        fn from(value: u8) -> Self {
+    impl TryFrom<u8> for Coffee {
+        type Error = BitWrapError;
+
+        fn try_from(value: u8) -> Result<Self, Self::Error> {
             match value {
-                0 => Coffee::Water,
-                1 => Coffee::Latte,
-                2 => Coffee::Cappuccino,
-                3 => Coffee::Espresso,
-                4 => Coffee::Americano,
-                _ => unreachable!(),
+                0 => Ok(Coffee::Water),
+                1 => Ok(Coffee::Latte),
+                2 => Ok(Coffee::Cappuccino),
+                3 => Ok(Coffee::Espresso),
+                4 => Ok(Coffee::Americano),
+                _ => Err(BitWrapError),
             }
         }
     }
 
-    impl From<Coffee> for u8 {
-        fn from(value: Coffee) -> u8 {
+    impl TryFrom<Coffee> for u8 {
+        type Error = Infallible;
+
+        fn try_from(value: Coffee) -> Result<Self, Self::Error> {
             match value {
-                Coffee::Water => 0,
-                Coffee::Latte => 1,
-                Coffee::Cappuccino => 2,
-                Coffee::Espresso => 3,
-                Coffee::Americano => 4,
+                Coffee::Water => Ok(0),
+                Coffee::Latte => Ok(1),
+                Coffee::Cappuccino => Ok(2),
+                Coffee::Espresso => Ok(3),
+                Coffee::Americano => Ok(4),
             }
         }
     }
@@ -46,7 +56,7 @@ fn test_readme_convert() {
     #[derive(Default, BitWrap)]
     struct Packet {
         #[bitfield(4, name = _reserved, value = 0)]
-        #[bitfield(4, from = Coffee::from, into = Coffee::into)]
+        #[bitfield(4)]
         coffee: Coffee,
     }
 

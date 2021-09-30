@@ -241,8 +241,10 @@ impl BitWrapMacro {
             "u16"
         } else if bits <= 32 {
             "u32"
-        } else {
+        } else if bits <= 64 {
             "u64"
+        } else {
+            "u128"
         };
         let ty = Ident::new(convert_ty, proc_macro2::Span::call_site());
 
@@ -258,19 +260,6 @@ impl BitWrapMacro {
                     }
 
                     match v.to_string().as_str() {
-                        "from" => {
-                            extend_token_stream(&mut convert_from, &mut iter);
-                            convert_from.extend(quote! {
-                                (value)
-                            });
-                        }
-                        "into" => {
-                            extend_token_stream(&mut convert_into, &mut iter);
-                            convert_into.extend(quote! {
-                                ( self.#field_ident )
-                            });
-                        }
-
                         "name" => {
                             extend_token_stream(&mut field_name, &mut iter);
                         }
@@ -305,18 +294,16 @@ impl BitWrapMacro {
         }
 
         // set default conversion field -> bits
-        if convert_into.is_empty() {
-            match field_ty {
-                syn::Type::Path(v) if v.path.is_ident("bool") => {
-                    convert_into.extend(quote! {
-                        if self.#field_ident { 1 } else { 0 }
-                    });
-                }
-                _ => {
-                    convert_into.extend(quote! {
-                        self.#field_ident as #ty
-                    })
-                }
+        match field_ty {
+            syn::Type::Path(v) if v.path.is_ident("bool") => {
+                convert_into.extend(quote! {
+                    if self.#field_ident { 1 } else { 0 }
+                });
+            }
+            _ => {
+                convert_into.extend(quote! {
+                    #ty::try_from(self.#field_ident)?
+                })
             }
         }
 
@@ -327,18 +314,16 @@ impl BitWrapMacro {
         self.macro_make_bits(&ty, bits);
 
         // set default conversion bits -> field
-        if convert_from.is_empty() {
-            match field_ty {
-                syn::Type::Path(v) if v.path.is_ident("bool") => {
-                    convert_from.extend(quote! {
-                        value != 0
-                    });
-                }
-                _ => {
-                    convert_from.extend(quote! {
-                        value as #field_ty
-                    })
-                }
+        match field_ty {
+            syn::Type::Path(v) if v.path.is_ident("bool") => {
+                convert_from.extend(quote! {
+                    value != 0
+                });
+            }
+            _ => {
+                convert_from.extend(quote! {
+                    #field_ty::try_from(value)?
+                })
             }
         }
 
@@ -378,12 +363,14 @@ impl BitWrapMacro {
         quote! {
             impl bitwrap::BitWrapExt for #struct_id {
                 fn pack(&self, dst: &mut [u8]) -> Result<usize, bitwrap::BitWrapError> {
+                    use core::convert::TryFrom as _;
                     let mut offset: usize = 0;
                     #pack_list
                     Ok(offset)
                 }
 
                 fn unpack(&mut self, src: &[u8]) -> Result<usize, bitwrap::BitWrapError> {
+                    use core::convert::TryFrom as _;
                     let mut offset: usize = 0;
                     #unpack_list
                     Ok(offset)

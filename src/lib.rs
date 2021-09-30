@@ -9,9 +9,18 @@
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
-use core::fmt;
 
-pub use bitwrap_derive::*;
+use {
+    core::{
+        fmt,
+        convert::Infallible,
+    },
+};
+
+
+pub use {
+    bitwrap_derive::BitWrap,
+};
 
 
 #[derive(Debug, PartialEq)]
@@ -29,60 +38,19 @@ impl fmt::Display for BitWrapError {
 impl std::error::Error for BitWrapError {}
 
 
+impl From<Infallible> for BitWrapError {
+    fn from(x: Infallible) -> BitWrapError {
+        match x {}
+    }
+}
+
+
 pub trait BitWrapExt {
     /// Build byte array
     fn pack(&self, dst: &mut [u8]) -> Result<usize, BitWrapError>;
 
     /// Extract object field values from byte array
     fn unpack(&mut self, src: &[u8]) -> Result<usize, BitWrapError>;
-}
-
-
-#[cfg(feature = "std")]
-impl BitWrapExt for std::net::Ipv4Addr {
-    #[inline]
-    fn pack(&self, dst: &mut [u8]) -> Result<usize, BitWrapError> {
-        if dst.len() >= 4 {
-            dst[.. 4].clone_from_slice(&self.octets());
-            Ok(4)
-        } else {
-            Err(BitWrapError)
-        }
-    }
-
-    #[inline]
-    fn unpack(&mut self, src: &[u8]) -> Result<usize, BitWrapError> {
-        if src.len() >= 4 {
-            *self = std::net::Ipv4Addr::from(unsafe { *(src.as_ptr() as *const [u8; 4]) });
-            Ok(4)
-        } else {
-            Err(BitWrapError)
-        }
-    }
-}
-
-
-#[cfg(feature = "std")]
-impl BitWrapExt for std::net::Ipv6Addr {
-    #[inline]
-    fn pack(&self, dst: &mut [u8]) -> Result<usize, BitWrapError> {
-        if dst.len() >= 16 {
-            dst[.. 16].clone_from_slice(&self.octets());
-            Ok(16)
-        } else {
-            Err(BitWrapError)
-        }
-    }
-
-    #[inline]
-    fn unpack(&mut self, src: &[u8]) -> Result<usize, BitWrapError> {
-        if src.len() >= 16 {
-            *self = std::net::Ipv6Addr::from(unsafe { *(src.as_ptr() as *const [u8; 16]) });
-            Ok(16)
-        } else {
-            Err(BitWrapError)
-        }
-    }
 }
 
 

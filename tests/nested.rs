@@ -1,5 +1,7 @@
-use std::net::Ipv4Addr;
-use bitwrap::*;
+use {
+    std::net::Ipv4Addr,
+    bitwrap::*,
+};
 
 
 #[test]
@@ -9,8 +11,8 @@ fn test_readme_nested() {
         #[bitfield(8)] ttl: u8,
         #[bitfield(8)] protocol: u8,
         #[bitfield(16)] checksum: u16,
-        #[bitfield] src: Ipv4Addr,
-        #[bitfield] dst: Ipv4Addr,
+        #[bitfield(32)] src: Ipv4Addr,
+        #[bitfield(32)] dst: Ipv4Addr,
     }
 
     const DATA: &[u8] = &[

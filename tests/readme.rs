@@ -1,4 +1,8 @@
 use {
+    core::convert::{
+        TryFrom,
+        Infallible,
+    },
     std::net::Ipv4Addr,
     bitwrap::{
         BitWrap,
@@ -16,29 +20,27 @@ fn test_readme() {
         ValueAA,
     }
 
-    impl BitWrapExt for Variant {
-        fn pack(&self, dst: &mut [u8]) -> Result<usize, BitWrapError> {
-            if ! dst.is_empty() {
-                dst[0] = match self {
-                    Variant::Value55 => 0x55,
-                    Variant::ValueAA => 0xAA,
-                };
-                Ok(1)
-            } else {
-                Err(BitWrapError)
+    impl Default for Variant {
+        fn default() -> Self { Variant::Value55 }
+    }
+
+    impl TryFrom<u8> for Variant {
+        type Error = BitWrapError;
+        fn try_from(value: u8) -> Result<Self, Self::Error> {
+            match value {
+                0x55 => Ok(Variant::Value55),
+                0xAA => Ok(Variant::ValueAA),
+                _ => Err(BitWrapError),
             }
         }
+    }
 
-        fn unpack(&mut self, src: &[u8]) -> Result<usize, BitWrapError> {
-            if ! src.is_empty() {
-                *self = match src[0] {
-                    0x55 => Variant::Value55,
-                    0xAA => Variant::ValueAA,
-                    _ => return Err(BitWrapError),
-                };
-                Ok(1)
-            } else {
-                Err(BitWrapError)
+    impl TryFrom<Variant> for u8 {
+        type Error = Infallible;
+        fn try_from(value: Variant) -> Result<Self, Self::Error> {
+            match value {
+                Variant::Value55 => Ok(0x55),
+                Variant::ValueAA => Ok(0xAA),
             }
         }
     }
@@ -53,10 +55,10 @@ fn test_readme() {
 
         #[bitfield(6, name = _reserved, value = 0b111111)]
 
-        #[bitfield]
+        #[bitfield(8)]
         variant: Variant,
 
-        #[bitfield]
+        #[bitfield(32)]
         ip: Ipv4Addr,
 
         #[bitfield]

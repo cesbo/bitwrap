@@ -26,7 +26,46 @@ fn unpack(&mut self, src: &[u8]) -> Result<usize, BitWrapError>
 ## BitWrap Macro
 
 ```rust
-use bitwrap::{BitWrap, BitWrapExt};
+use {
+    core::convert::{
+        TryFrom,
+        Infallible,
+    },
+    std::net::Ipv4Addr,
+    bitwrap::{
+        BitWrap,
+        BitWrapExt,
+        BitWrapError,
+    },
+};
+
+#[derive(Debug, PartialEq, Clone, Copy)]
+    enum Variant { Value55, ValueAA }
+
+impl Default for Variant {
+    fn default() -> Self { Variant::Value55 }
+}
+
+impl TryFrom<u8> for Variant {
+    type Error = BitWrapError;
+    fn try_from(value: u8) -> Result<Self, Self::Error> {
+        match value {
+            0x55 => Ok(Variant::Value55),
+            0xAA => Ok(Variant::ValueAA),
+            _ => Err(BitWrapError),
+        }
+    }
+}
+
+impl TryFrom<Variant> for u8 {
+    type Error = Infallible;
+    fn try_from(value: Variant) -> Result<Self, Self::Error> {
+        match value {
+            Variant::Value55 => Ok(0x55),
+            Variant::ValueAA => Ok(0xAA),
+        }
+    }
+}
 
 #[derive(BitWrap)]
 struct Packet {
@@ -34,10 +73,8 @@ struct Packet {
     #[bitfield(1)]
     field_1: u8,
 
-    // single bit field as boolean:
-    // - 0 - false
-    // - 1 - true
-    #[bitfield]
+    // bit field as boolean. 0 is false, otherwise is true
+    #[bitfield(1)]
     field_2: bool,
 
     // virtual field with option `name`
@@ -45,8 +82,12 @@ struct Packet {
     // pack sets 6 bits from defined `value`
     #[bitfield(6, name = _reserved, value = 0b111111)]
 
-    // call BitWrapExt methods for Ipv4Addr
-    #[bitfield]
+    // use TryFrom<u8> for Variant
+    #[bitfield(8)]
+    variant: Variant,
+
+    // use TryFrom<u32> for Ipv4Addr
+    #[bitfield(32)]
     ip: std::net::Ipv4Addr
 
     // byte array
