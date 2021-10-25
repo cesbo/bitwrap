@@ -97,3 +97,30 @@ impl<T: BitWrapExt + Default> BitWrapExt for Vec<T> {
         Ok(skip)
     }
 }
+
+
+#[cfg(feature = "std")]
+impl BitWrapExt for String {
+    #[inline]
+    fn pack(&self, dst: &mut [u8]) -> Result<usize, BitWrapError> {
+        let s = self.as_bytes();
+        let len = s.len();
+        if dst.len() >= len {
+            dst[.. len].clone_from_slice(s);
+            Ok(len)
+        } else {
+            Err(BitWrapError)
+        }
+    }
+
+    #[inline]
+    fn unpack(&mut self, src: &[u8]) -> Result<usize, BitWrapError> {
+        let s = match std::str::from_utf8(src) {
+            Ok(v) => v,
+            Err(_) => return Err(BitWrapError),
+        };
+
+        self.push_str(s);
+        Ok(src.len())
+    }
+}
